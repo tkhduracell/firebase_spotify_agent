@@ -4,6 +4,10 @@ import router from "./router";
 
 Vue.config.productionTip = false;
 
+import composition from '@vue/composition-api'
+
+Vue.use(composition)
+
 new Vue({
   router,
   render: h => h(App)
