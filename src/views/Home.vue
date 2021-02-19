@@ -2,7 +2,10 @@
   <div class="home">
     <div v-if="state && state.is_playing && state.item" class="state">
       <h1>{{ name }}</h1>
-      <h4>{{seconds}} seconds / {{secondsTotal}} </h4>
+      <h4>{{seconds}} seconds / {{secondsTotal}}</h4>
+      <div>
+        Max Sec: <input v-model="max" />
+      </div>
       <div v-for="img in state.item.album.images" :key="img.url">
         <img :src="img.url" v-if="img.width === 300" class="image" />
       </div>
@@ -26,6 +29,7 @@ export default defineComponent({
   name:'Home',
   setup(props, { root: { $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
+    const max = ref<string>('100')
 
     let refresh: any = null
     const client = new Spotify();
@@ -53,8 +57,8 @@ export default defineComponent({
       return ''
     })
 
-    watch(seconds, (s) => {
-      if (s > 90) {
+    watch(state, (s) => {
+      if (s && (s.progress_ms ?? 0) > parseInt(max.value) * 1000) {
         client.skipToNext()
       }
     })
@@ -92,7 +96,8 @@ export default defineComponent({
     return {
       name,
       seconds, secondsTotal,
-      state
+      state,
+      max
     }
   }
 })
@@ -108,6 +113,10 @@ export default defineComponent({
     width: 60em;
     height: 90em;
     text-align: center;
+
+    .image {
+      margin-top: 1em;
+    }
 
     pre {
       text-align: left;
