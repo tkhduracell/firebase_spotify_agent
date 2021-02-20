@@ -1,0 +1,31 @@
+// Define variable defaults
+$body-bg: #252525;
+$body-color: #19000b;
+
+$info: #19000b;
+$primary: #2bab66;
+$dark: #252525;
+
+$grid-gutter-width: 20px;
+$container-max-widths: (
+  sm: 540px,
+  md: 720px,
+  lg: 1420px,
+  xl: 1910px
+) !default;
+
+
+// Then import Bootstrap an BootstrapVue SCSS files (order is important)
+@import 'node_modules/bootstrap/scss/bootstrap.scss';
+@import 'node_modules/bootstrap-vue/src/index.scss';
+
+@import url('https://fonts.googleapis.com/css?family=Roboto+Condensed');
+
+html, body {
+  font-family: 'Roboto', sans-serif;
+}
+
+#app {
+  font-family: 'Roboto', sans-serif;
+  color: whitesmoke;
+}

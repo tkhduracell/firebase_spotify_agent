@@ -1,5 +1,16 @@
 <template>
-  <div class="about">
-    <h1>This app is writted by Filip Lindqvist.</h1>
-  </div>
+  <b-container>
+    <b-row class="about">
+      <b-col>
+        <h1>About Spotify Agent</h1>
+        <p>
+          This app is meant to help dance traning by switching song after fixed
+          intervals.
+        </p>
+        <p>
+          © Filip Lindqvist 2021
+        </p>
+      </b-col>
+    </b-row>
+  </b-container>
 </template>
