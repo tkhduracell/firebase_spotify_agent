@@ -19,6 +19,18 @@ const routes: Array<RouteConfig> = [
     component: () =>
       import(/* webpackChunkName: "about" */ '../views/About.vue'),
   },
+  {
+    path: '/logout',
+    beforeEnter() {
+      window.location = ('https://accounts.spotify.com/en/logout' as unknown) as Location
+    },
+  },
+  {
+    path: '/status',
+    beforeEnter() {
+      window.location = ('https://accounts.spotify.com/sv/status' as unknown) as Location
+    },
+  },
 ]
 
 const router = new VueRouter({

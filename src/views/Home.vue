@@ -1,6 +1,6 @@
 <template>
   <b-container fluid class="home">
-    <b-row v-if="state && state.is_playing && state.item" class="state">
+    <b-row v-if="state && state.item" class="state">
       <b-col cols="6">
         <div class="analysis" v-if="analysis">
           <div>{{ analysis.tempo.toFixed(0) }} BPM</div>
@@ -12,7 +12,11 @@
             {{ seconds.toFixed(0) }} / {{ secondsTotal.toFixed(0) }} seconds
           </h4>
 
-          <b-progress height="2rem" :max="max" class="mb-3 progress">
+          <b-progress
+            height="2rem"
+            :max="enabled ? max : secondsTotal"
+            class="mb-3 progress"
+          >
             <b-progress-bar
               :value="seconds"
               :label="progressLabel"
@@ -23,8 +27,11 @@
         <PlaybackLimiter
           :value="max"
           @update:value="max = $event"
+          :enabled="enabled"
+          @update:enabled="enabled = $event"
           class="limiter"
         />
+
         <b-row class="mt-2">
           <b-col cols="4">
             <b class="d-block">Controls</b>
@@ -48,17 +55,29 @@
                 </b-button>
               </b-col>
             </b-row>
+            <b-row v-if="state.device">
+              <b-col>
+                Volume: {{ state.device.volume_percent }}
+                <b-icon-volume-up-fill scale="2.0" class="mr-2 ml-2" />
+              </b-col>
+            </b-row>
           </b-col>
           <b-col cols="8">
             <b class="d-block">Last played</b>
             <div v-if="history && history.items">
               <div
-                v-for="l in history.items"
-                :key="'h-' + l.track.id"
+                v-for="(l, idx) in history.items"
+                :key="'h-' + l.track.id + '-idx-' + idx"
                 v-text="trackFormat(l.track, true)"
               />
             </div>
-            <b-spinner v-else />
+            <div v-else>
+              <b-skeleton class="mt-1" width="85%" />
+              <b-skeleton class="mt-1" width="55%" />
+              <b-skeleton class="mt-1" width="75%" />
+              <b-skeleton class="mt-1" width="90%" />
+              <b-skeleton class="mt-1" width="65%" />
+            </div>
           </b-col>
         </b-row>
       </b-col>
@@ -175,11 +194,10 @@ export default defineComponent({
     })
 
     const progressLabel = computed(() => {
-      const left = Math.max(max.value - seconds.value, 0).toFixed(0)
-      const pct = ((seconds.value / max.value) * 100).toFixed(0)
-      return seconds.value / max.value < 0.1
-        ? ''
-        : `${pct}% (${left} seconds left)`
+      const end = enabled.value ? max.value : secondsTotal.value
+      const left = Math.max(end - seconds.value, 0).toFixed(0)
+      const pct = ((seconds.value / end) * 100).toFixed(0)
+      return seconds.value / end < 0.1 ? '' : `${pct}% (${left} seconds left)`
     })
 
     watch(
@@ -188,7 +206,9 @@ export default defineComponent({
         if (id) {
           analysis.value = await client.getAudioFeaturesForTrack(id)
           Vue.set(bpms, id, analysis.value.tempo)
-          history.value = await client.getMyRecentlyPlayedTracks({ limit: 5 })
+          setTimeout(async () => {
+            history.value = await client.getMyRecentlyPlayedTracks({ limit: 5 })
+          }, 3000)
         }
       }
     )
@@ -209,7 +229,7 @@ export default defineComponent({
     )
 
     watch(state, s => {
-      if (s && (s.progress_ms ?? 0) > max.value * 1000) {
+      if (s && enabled.value && (s.progress_ms ?? 0) > max.value * 1000) {
         client.skipToNext()
       }
     })
@@ -247,8 +267,14 @@ export default defineComponent({
     })
 
     async function play(context: string) {
-      // eslint-disable-next-line @typescript-eslint/camelcase
-      await client.play(context ? { context_uri: context } : {})
+      if (context && typeof context === 'string') {
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        await client.play({ context_uri: context })
+      } else if (state.value && state.value.is_playing) {
+        await client.pause()
+      } else {
+        await client.play()
+      }
     }
 
     async function playNext() {
@@ -294,8 +320,7 @@ export default defineComponent({
     .progress {
       background: #1b5894;
     }
-    .limiter {
-    }
+
     .analysis {
       margin-top: 2rem;
       font-size: 8em;
