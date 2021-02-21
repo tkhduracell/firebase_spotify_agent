@@ -1,8 +1,8 @@
 <template>
   <div class="limiter-control">
-    <b-row>
-      <b-col class="label">Skip to next after (seconds)</b-col>
-      <b-col
+    <b-row class="no-gutters">
+      <b-col class="label mr-2" cols="auto">Skip to next after</b-col>
+      <b-col class="mr-2"
         ><b-form-input
           type="number"
           class="custom"
@@ -10,10 +10,10 @@
           @update="$emit('update:value', parseInt($event))"
         />
       </b-col>
-      <div class="w-100 mt-3"></div>
-      <b-col v-for="sec in fixed" :key="'set-' + sec">
+      <b-col class="label mr-2" cols="auto">sec</b-col>
+      <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
         <b-button
-          class="fixed w-100"
+          class="fixed ml-1"
           variant="primary"
           @click="$emit('update:value', sec)"
           v-text="sec + ' sec'"
