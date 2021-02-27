@@ -1,5 +1,5 @@
 <template>
-  <div class="limiter-control">
+  <div class="queuer">
     <b-row class="no-gutters" align-v="center">
       <b-col cols="auto">
         <b-form-checkbox
@@ -10,31 +10,37 @@
           size="lg"
         />
       </b-col>
-      <b-col class="label main mr-2" cols="auto">Skip to next after</b-col>
+      <b-col class="label main mr-2" cols="auto">Auto queue</b-col>
       <b-col class="mr-2"
-        ><b-form-input
+        ><b-form-spinbutton
           :disabled="!enabled"
-          size="lg"
-          type="number"
           class="custom"
-          :value="value + ''"
-          @update="$emit('update:value', parseInt($event))"
-        />
-      </b-col>
-      <b-col class="label mr-2" cols="auto">sec</b-col>
-      <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
-        <b-button
-          :disabled="!enabled"
-          class="fixed ml-1"
+          min="80"
+          max="200"
+          step="10"
           size="lg"
-          variant="primary"
-          @click="$emit('update:value', sec)"
-          v-text="sec + ' sec'"
+          :value="target"
+          @change="$emit('update:target', parseInt($event))"
         />
       </b-col>
+      <b-col class="label mr-2" cols="auto"
+        >bpm
+        <b-icon-alt scale="1.4" class="ml-1 mr-1" />
+      </b-col>
+      <b-col class="mr-2"
+        ><b-form-spinbutton
+          :disabled="!enabled"
+          class="custom"
+          min="0"
+          max="20"
+          step="5"
+          size="lg"
+          :value="range"
+          @change="$emit('update:range', parseInt($event))"
+        />
+      </b-col>
+      <b-col class="label mr-2" cols="auto">bpm </b-col>
     </b-row>
-
-    <div></div>
   </div>
 </template>
 
@@ -42,21 +48,17 @@
 import { defineComponent } from '@vue/composition-api'
 
 export default defineComponent({
-  name: 'PlaybackLimiter',
+  name: 'PlaybackAutoQueuer',
   props: {
-    value: { type: Number, required: true },
     enabled: { type: Boolean, required: true },
-  },
-  setup() {
-    return {
-      fixed: [30, 60, 90, 120],
-    }
+    target: { type: Number, required: true },
+    range: { type: Number, required: true },
   },
 })
 </script>
 
 <style lang="scss">
-.limiter-control {
+.queuer {
   .label {
     font-weight: bold;
     margin-top: 6px;
