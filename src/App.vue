@@ -16,8 +16,15 @@
 
       <b-collapse id="nav-collapse" is-nav>
         <b-navbar-nav>
-          <b-nav-item to="/">Home</b-nav-item>
-          <b-nav-item to="/about">About</b-nav-item>
+          <b-nav-item active-class="active" :to="{ name: 'Home' }"
+            >Home</b-nav-item
+          >
+          <b-nav-item active-class="active" :to="{ name: 'About' }"
+            >About</b-nav-item
+          >
+          <b-nav-item active-class="active" :to="{ name: 'Recommendations' }"
+            >Recommendations</b-nav-item
+          >
         </b-navbar-nav>
 
         <!-- Right aligned nav items -->

@@ -20,6 +20,14 @@ const routes: Array<RouteConfig> = [
       import(/* webpackChunkName: "about" */ '../views/About.vue'),
   },
   {
+    path: '/recommendations',
+    name: 'Recommendations',
+    component: () =>
+      import(
+        /* webpackChunkName: "recommendations" */ '../views/Recommendations.vue'
+      ),
+  },
+  {
     path: '/logout',
     beforeEnter() {
       window.location = ('https://accounts.spotify.com/en/logout' as unknown) as Location

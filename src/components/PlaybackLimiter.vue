@@ -11,7 +11,17 @@
         />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Skip to next after</b-col>
-      <b-col class="mr-2"
+      <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
+        <b-button
+          :disabled="!enabled"
+          class="fixed mr-1"
+          size="lg"
+          variant="primary"
+          @click="$emit('update:value', sec)"
+          v-text="sec"
+        />
+      </b-col>
+      <b-col class="mr-1"
         ><b-form-input
           :disabled="!enabled"
           size="lg"
@@ -21,17 +31,7 @@
           @update="$emit('update:value', parseInt($event))"
         />
       </b-col>
-      <b-col class="label mr-2" cols="auto">sec</b-col>
-      <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
-        <b-button
-          :disabled="!enabled"
-          class="fixed ml-1"
-          size="lg"
-          variant="primary"
-          @click="$emit('update:value', sec)"
-          v-text="sec + ' sec'"
-        />
-      </b-col>
+      <b-col class="label" cols="auto">sec</b-col>
     </b-row>
 
     <div></div>
@@ -62,7 +62,8 @@ export default defineComponent({
     margin-top: 6px;
   }
   .label.main {
-    min-width: 14em;
+    max-width: 14em;
+    min-width: 10em;
   }
   .check-button {
     margin-top: 0.2em;

@@ -72,7 +72,9 @@
                   Next up ({{ queue.sent ? 'queued' : 'suggested' }})
                 </b>
                 {{ trackFormat(queue.track, true) }}
-                <p class="small">selected among {{ queue.pool }} other track</p>
+                <p :class="{ small: true, 'text-danger': queue.pool < 10 }">
+                  selected among {{ queue.pool }} other track
+                </p>
               </b-col>
             </b-row>
           </b-col>
@@ -141,15 +143,11 @@
 import {
   computed,
   defineComponent,
-  onMounted,
-  onUnmounted,
   reactive,
   ref,
   toRef,
   watch,
 } from '@vue/composition-api'
-
-import Spotify from 'spotify-web-api-js'
 
 import PlaybackLimiter from '@/components/PlaybackLimiter.vue'
 import PlaybackAutoQueuer from '@/components/PlaybackAutoQueuer.vue'
@@ -157,6 +155,7 @@ import PlaylistBadge from '@/components/PlaylistBadge.vue'
 
 import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
+import { useSpotifyRedirect } from '@/auth'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -203,8 +202,8 @@ export default defineComponent({
       autoQueueRange: 10,
     })
 
-    let refresh: number | null = null
-    const client = new Spotify()
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    const { client } = useSpotifyRedirect($route, update, update)
 
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
@@ -224,7 +223,6 @@ export default defineComponent({
         if (err.status === 401 && err.responseText) {
           const { error: errorObj } = JSON.parse(err.responseText)
           error.value = errorObj
-          if (refresh) clearInterval(refresh)
         }
         console.error(err)
       }
@@ -337,38 +335,6 @@ export default defineComponent({
           queue.sent = true
         }
       }
-    })
-
-    onUnmounted(() => {
-      if (refresh) clearInterval(refresh)
-    })
-
-    onMounted(async () => {
-      const url = new URL('https://accounts.spotify.com/authorize')
-      url.searchParams.append('client_id', '2c23b47cf7274b24b1a34382a32ac94b')
-      url.searchParams.append('response_type', 'token')
-      url.searchParams.append('redirect_uri', document.location.toString())
-      url.searchParams.append(
-        'scope',
-        [
-          'user-read-playback-state',
-          'user-modify-playback-state',
-          'user-read-currently-playing',
-          'user-read-recently-played',
-        ].join(',')
-      )
-
-      if ($route.hash.includes('access_token')) {
-        const params = new URLSearchParams($route.hash.replace(/^#/gim, ''))
-        const token = params.get('access_token')
-        client.setAccessToken(token)
-
-        await update()
-      } else {
-        document.location = (url.toString() as unknown) as Location
-      }
-
-      refresh = setInterval(update, 1000)
     })
 
     async function play(context: string) {

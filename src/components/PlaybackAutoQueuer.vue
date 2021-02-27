@@ -64,7 +64,8 @@ export default defineComponent({
     margin-top: 6px;
   }
   .label.main {
-    min-width: 14em;
+    max-width: 14em;
+    min-width: 10em;
   }
   .check-button {
     margin-top: 0.2em;
