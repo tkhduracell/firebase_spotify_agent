@@ -16,7 +16,10 @@
 
       <b-collapse id="nav-collapse" is-nav>
         <b-navbar-nav>
-          <b-nav-item active-class="active" :to="{ name: 'Home' }"
+          <b-nav-item
+            active-class="active"
+            exact
+            :to="{ name: 'Home', hash: $route.hash }"
             >Home</b-nav-item
           >
           <b-nav-item active-class="active" :to="{ name: 'About' }"

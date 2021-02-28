@@ -1,7 +1,7 @@
 <template>
   <b-container>
-    <b-row class="about">
-      <b-col>
+    <b-row align-h="center" class="about">
+      <b-col cols="auto">
         <h1>About Spotify Agent</h1>
         <p>
           This app is meant to help dance traning by switching song after fixed
