@@ -21,7 +21,7 @@
           v-text="sec"
         />
       </b-col>
-      <b-col class="mr-1"
+      <b-col class="mr-2"
         ><b-form-input
           :disabled="!enabled"
           size="lg"
@@ -31,7 +31,7 @@
           @update="$emit('update:value', parseInt($event))"
         />
       </b-col>
-      <b-col class="label" cols="auto">sec</b-col>
+      <b-col class="label last" cols="auto">sec</b-col>
     </b-row>
 
     <div></div>
@@ -64,6 +64,9 @@ export default defineComponent({
   .label.main {
     max-width: 14em;
     min-width: 10em;
+  }
+  .label.last {
+    width: 2em;
   }
   .check-button {
     margin-top: 0.2em;

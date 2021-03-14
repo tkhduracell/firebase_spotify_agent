@@ -39,7 +39,7 @@
           @change="$emit('update:range', parseInt($event))"
         />
       </b-col>
-      <b-col class="label mr-2" cols="auto">bpm </b-col>
+      <b-col class="label last" cols="auto">bpm </b-col>
     </b-row>
   </div>
 </template>
@@ -66,6 +66,9 @@ export default defineComponent({
   .label.main {
     max-width: 14em;
     min-width: 10em;
+  }
+  .label.last {
+    width: 2em;
   }
   .check-button {
     margin-top: 0.2em;

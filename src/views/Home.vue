@@ -8,11 +8,11 @@
           <h1 v-if="current">{{ trackFormat(current) }}</h1>
 
           <b-row align-v="center" align-h="center">
-            <b-col cols="auto"
-              ><PlaylistBadge :context="context" v-if="context"
-            /></b-col>
             <b-col cols="auto">
-              <b-button variant="link" @click="playPrev">
+              <PlaylistBadge :context="context" v-if="context" />
+            </b-col>
+            <b-col cols="auto">
+              <b-button variant="link" @click="playPrev" :disabled="queue.sent">
                 <b-icon-skip-forward-circle scale="2.0" class="mt-4 mb-4" />
               </b-button>
 
@@ -23,7 +23,7 @@
                 <b-icon-play scale="3.0" class="mt-4 mb-4" />
               </b-button>
 
-              <b-button variant="link" @click="playNext">
+              <b-button variant="link" @click="playNext" :disabled="queue.sent">
                 <b-icon-skip-backward-circle scale="2.0" class="mt-4 mb-4" />
               </b-button>
             </b-col>
@@ -34,7 +34,7 @@
             </b-col>
           </b-row>
 
-          <b-progress height="2rem" :max="secondsMax" class="mb-3 progress">
+          <b-progress height="2rem" :max="secondsMax" class="mb-3 seconds">
             <b-progress-bar
               :value="seconds"
               :label="progressLabel"
@@ -56,6 +56,13 @@
           @update:target="settings.autoQueueTarget = $event"
           :range="settings.autoQueueRange"
           @update:range="settings.autoQueueRange = $event"
+        />
+        <PlaybackAutoFade
+          :enabled="settings.autoFadeEnabled"
+          @update:enabled="settings.autoFadeEnabled = $event"
+          :volume="playback.device.volume_percent"
+          :is-fading="fading.fadedown || fading.fadeup"
+          v-if="playback"
         />
 
         <b-row class="mt-2">
@@ -113,7 +120,7 @@
         </b-sidebar>
       </b-col>
     </b-row>
-    <div v-else-if="state && !state.is_playing">
+    <b-row v-else-if="state && !state.is_playing" align-h="center">
       <h1>Not playing</h1>
       <p>Play something with you spotify client.</p>
       <b>Try this:</b>
@@ -124,18 +131,18 @@
         <b-icon-play />
         Freesprut Buggisar
       </b-button>
-    </div>
-    <div v-else-if="error && error.status === 401">
+    </b-row>
+    <b-row v-else-if="error && error.status === 401">
       <b-card class="bg-dark text-light">
         <p>You have been logged out.</p>
         <b-button variant="primary" href="/" class="w-100"
           >Login me in again!</b-button
         >
       </b-card>
-    </div>
-    <div v-else>
+    </b-row>
+    <b-row align-h="center" v-else>
       Nothing is playing right now.
-    </div>
+    </b-row>
 
     <div class="clock">{{ clock.getHours() }}:{{ clock.getMinutes() }}</div>
   </b-container>
@@ -153,6 +160,7 @@ import {
 
 import PlaybackLimiter from '@/components/PlaybackLimiter.vue'
 import PlaybackAutoQueuer from '@/components/PlaybackAutoQueuer.vue'
+import PlaybackAutoFade from '@/components/PlaybackAutoFade.vue'
 import PlaylistBadge from '@/components/PlaylistBadge.vue'
 
 import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
@@ -166,6 +174,7 @@ type Settings = {
   autoQueueEnabled: boolean
   autoQueueTarget: number
   autoQueueRange: number
+  autoFadeEnabled: boolean
 }
 
 function usePersistedSettings(defaults: Settings) {
@@ -182,9 +191,15 @@ function usePersistedSettings(defaults: Settings) {
 
 export default defineComponent({
   name: 'Home',
-  components: { PlaybackLimiter, PlaybackAutoQueuer, PlaylistBadge },
+  components: {
+    PlaybackLimiter,
+    PlaybackAutoQueuer,
+    PlaybackAutoFade,
+    PlaylistBadge,
+  },
   setup(props, { root: { $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
+    const playback = ref<SpotifyApi.CurrentPlaybackResponse>()
     const historyItems = ref<TrackWithBPM[]>([])
     const context = ref<SpotifyApi.PlaylistObjectSimplified>()
     const playlist = ref<TrackWithBPM[]>([])
@@ -196,6 +211,11 @@ export default defineComponent({
       track: undefined as TrackWithBPM | undefined,
       pool: 0,
     })
+    const fading = reactive({
+      fadedown: false,
+      fadeup: false,
+      volume: 0 as number | null | undefined,
+    })
 
     const { settings } = usePersistedSettings({
       timeLimitEnabled: false,
@@ -203,6 +223,7 @@ export default defineComponent({
       autoQueueEnabled: false,
       autoQueueTarget: 140,
       autoQueueRange: 10,
+      autoFadeEnabled: false,
     })
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -223,6 +244,8 @@ export default defineComponent({
           | ''
           | SpotifyApi.CurrentlyPlayingResponse
         state.value = res === '' ? undefined : res
+
+        playback.value = await client.getMyCurrentPlaybackState()
       } catch (err) {
         if (err.status === 401 && err.responseText) {
           const { error: errorObj } = JSON.parse(err.responseText)
@@ -328,23 +351,73 @@ export default defineComponent({
       }
     )
 
-    watch(state, s => {
-      if (
-        s &&
-        settings.timeLimitEnabled &&
-        (s.progress_ms ?? 0) > settings.timeLimitSeconds * 1000
-      ) {
-        client.skipToNext()
+    function passed(cpr: SpotifyApi.CurrentlyPlayingResponse, seconds: number) {
+      return (cpr.progress_ms ?? 0) > seconds * 1000
+    }
+
+    watch(state, async s => {
+      if (!s) return
+
+      if (settings.timeLimitEnabled && passed(s, settings.timeLimitSeconds)) {
+        await client.skipToNext()
       }
-      if (
-        s &&
-        settings.autoQueueEnabled &&
-        (s.progress_ms ?? 0) + 5000 > secondsMax.value * 1000
-      ) {
+
+      if (settings.autoQueueEnabled && passed(s, secondsMax.value - 5)) {
         if (queue.track && !queue.sent) {
           console.log('Queued track:', queue.track.title, queue.track.bpm)
-          client.queue(`spotify:track:${queue.track.id}`)
+          await client.queue(`spotify:track:${queue.track.id}`)
           queue.sent = true
+        }
+      }
+
+      if (settings.autoFadeEnabled && passed(s, secondsMax.value - 5)) {
+        /* Go down */
+
+        if (!fading.fadedown) {
+          const p = (fading.volume = playback.value?.device.volume_percent)
+          if (p) {
+            console.log('Starting to fade down from', p, '->', 0)
+            setTimeout(() => client.setVolume(Math.round(p * 0.9)), 0)
+            setTimeout(() => client.setVolume(Math.round(p * 0.8)), 500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.7)), 1000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.6)), 1500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.5)), 2000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.4)), 2500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.3)), 3500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.2)), 4000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.1)), 4500)
+            setTimeout(() => client.setVolume(0), 5000)
+
+            fading.fadedown = true
+            return
+          }
+        }
+      }
+
+      if (settings.autoFadeEnabled && !passed(s, 5)) {
+        if (fading.fadedown && !fading.fadeup) {
+          const p = fading.volume
+          if (p) {
+            console.log('Starting to fade up from 0 ->', p)
+            setTimeout(() => client.setVolume(Math.round(p * 0.1)), 0)
+            setTimeout(() => client.setVolume(Math.round(p * 0.2)), 500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.3)), 1000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.4)), 1500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.5)), 2000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.6)), 2500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.7)), 3500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.8)), 4000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.9)), 4500)
+            setTimeout(() => {
+              client.setVolume(p).finally(() => {
+                fading.fadeup = false
+                fading.fadedown = false
+              })
+            }, 5000)
+
+            fading.fadeup = true
+            return
+          }
         }
       }
     })
@@ -386,6 +459,8 @@ export default defineComponent({
       context,
       queue,
       current,
+      playback,
+      fading,
     }
   },
 })
@@ -408,7 +483,7 @@ export default defineComponent({
     .image {
       margin-top: 1em;
     }
-    .progress {
+    .seconds {
       background: #1b5894;
     }
     .seconds-left {
@@ -420,11 +495,11 @@ export default defineComponent({
       line-height: 1em;
       text-align: center;
     }
-    @media (min-width: 1500px) {
+    @media (min-width: 1700px) {
       .bpm {
         font-size: 14em;
       }
-      .progress {
+      .seconds {
         height: 2em !important;
         font-size: 3.4em;
       }
