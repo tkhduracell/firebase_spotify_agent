@@ -258,6 +258,14 @@ export default defineComponent({
         if (id) {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           const item = state.value?.item!
+          if (
+            settings.autoQueueEnabled &&
+            queue.track &&
+            queue.track?.id !== id
+          ) {
+            console.warn('New played item was not as queued')
+            settings.autoQueueEnabled = false
+          }
           queue.sent = false
           historyItems.value = [
             await tracks.getTrackWithTempo(toSimple(item)),
