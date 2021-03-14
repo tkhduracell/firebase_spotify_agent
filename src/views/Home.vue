@@ -136,6 +136,8 @@
     <div v-else>
       Nothing is playing right now.
     </div>
+
+    <div class="clock">{{ clock.getHours() }}:{{ clock.getMinutes() }}</div>
   </b-container>
 </template>
 
@@ -156,6 +158,7 @@ import PlaylistBadge from '@/components/PlaylistBadge.vue'
 import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
 import { useSpotifyRedirect } from '@/auth'
+import { useClock } from '@/clock'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -204,6 +207,7 @@ export default defineComponent({
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const { client } = useSpotifyRedirect($route, update, update)
+    const { clock } = useClock()
 
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
@@ -357,6 +361,7 @@ export default defineComponent({
 
     return {
       name,
+      clock,
       seconds,
       secondsTotal,
       secondsMax,
@@ -380,6 +385,14 @@ export default defineComponent({
 
 <style lang="scss">
 .home {
+  position: relative;
+  .clock {
+    position: absolute;
+    top: -20px;
+    left: 6px;
+    font-size: 2em;
+  }
+
   .state {
     .header {
       text-align: center;
