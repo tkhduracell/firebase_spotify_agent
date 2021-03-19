@@ -113,11 +113,6 @@
           :src="img.url"
           class="image w-100 shadow"
         />
-        <b-sidebar id="sidebar-debug" title="JSON Data" width="60%" shadow>
-          <div class="px-3 py-2">
-            <pre>{{ JSON.stringify(state, null, 2) }}</pre>
-          </div>
-        </b-sidebar>
       </b-col>
     </b-row>
     <b-row v-else-if="state && !state.is_playing" align-h="center">
@@ -125,7 +120,7 @@
       <p>Play something with you spotify client.</p>
       <b>Try this:</b>
       <b-button
-        variant="link"
+        variant="outline-primary"
         @click="play('spotify:playlist:7te7WrFpNb1rjk0WRarnNR')"
       >
         <b-icon-play />
@@ -140,11 +135,65 @@
         >
       </b-card>
     </b-row>
-    <b-row align-h="center" v-else>
-      Nothing is playing right now.
+    <b-row v-else>
+      <b-col class="mt-4" offset="3" cols="6">
+        <h1>Welcome to Spotify Agent!</h1>
+        <p>
+          This is a music tool written to ease Spotify playback during dance
+          traning.
+        </p>
+        <h2>How do I use it?</h2>
+        <p>Let's go through each step.</p>
+        <h4>1. Open this page (you're done already, great!)</h4>
+        <p>Open this page in any modern browser.</p>
+        <h4>2. Open Spotify</h4>
+        <p>
+          Open Spotify on your computer or use your mobile.
+        </p>
+        <h4>3. Play a playlist</h4>
+        <p>
+          Find a playlist with <b>MANY</b> tracks that can be the source for you
+          playback. If you don't have anyone, you can choose to start the one
+          below.
+        </p>
+        <p>
+          <b>Start a playlist</b>
+        </p>
+        <div class="mb-4">
+          <b-button
+            variant="outline-primary"
+            @click="loadDevices()"
+            class="mr-2"
+          >
+            <b-icon-arrow-counterclockwise />
+          </b-button>
+          <b-form-select v-model="device" v-if="devices" class="w-50 mr-2">
+            <b-form-select-option
+              v-for="dev in devices.devices"
+              :key="dev.id"
+              :value="dev"
+            >
+              {{ dev.name }} ({{ dev.type }})
+            </b-form-select-option>
+          </b-form-select>
+          <b-button
+            variant="outline-primary"
+            @click="play('spotify:playlist:7te7WrFpNb1rjk0WRarnNR', device)"
+          >
+            <b-icon-play />
+            Freesprut Buggisar
+          </b-button>
+        </div>
+        <h4>Current features</h4>
+        <ul>
+          <li>Switch track after a fixed number of seconds.</li>
+          <li>Limit playlist to a tempo range.</li>
+          <li>Lower volume between tracks.</li>
+        </ul>
+      </b-col>
     </b-row>
 
-    <div class="clock">{{ clock.getHours() }}:{{ clock.getMinutes() }}</div>
+    <div class="clock">{{ hhmm }}</div>
   </b-container>
 </template>
 
@@ -167,6 +216,7 @@ import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
 import { useSpotifyRedirect } from '@/auth'
 import { useClock } from '@/clock'
+import { useDevices } from '@/devices'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -228,7 +278,8 @@ export default defineComponent({
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const { client } = useSpotifyRedirect($route, update, update)
-    const { clock } = useClock()
+    const clock = useClock()
+    const devices = useDevices(client)
 
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
@@ -422,10 +473,12 @@ export default defineComponent({
       }
     })
 
-    async function play(context: string) {
+    async function play(context: string, device?: SpotifyApi.UserDevice) {
       if (context && typeof context === 'string') {
         // eslint-disable-next-line @typescript-eslint/camelcase
-        await client.play({ context_uri: context })
+        const dev = device && device.id ? { device_id: device.id } : {}
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        await client.play({ context_uri: context, ...dev })
       } else if (state.value && state.value.is_playing) {
         await client.pause()
       } else {
@@ -442,7 +495,8 @@ export default defineComponent({
 
     return {
       name,
-      clock,
+      ...clock,
+      ...devices,
       seconds,
       secondsTotal,
       secondsMax,

@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, ref } from '@vue/composition-api'
+import { computed, onMounted, onUnmounted, ref } from '@vue/composition-api'
 
 export function useClock() {
   const handle = ref<number>()
@@ -13,5 +13,13 @@ export function useClock() {
       clearInterval(handle.value)
     }
   })
-  return { clock }
+
+  const hhmm = computed(() => {
+    const h = clock.value.getHours()
+    const hh = h < 10 ? `0${h}` : h
+    const m = clock.value.getMinutes()
+    const mm = m < 10 ? `0${m}` : m
+    return hh + ':' + mm
+  })
+  return { clock, hhmm }
 }
