@@ -337,8 +337,12 @@ export default defineComponent({
             queue.track &&
             queue.track?.id !== id
           ) {
-            console.warn('New played item was not as queued')
-            settings.autoQueueEnabled = false
+            console.warn(
+              'New played item was not as queued, expected: ',
+              queue.track,
+              'got:',
+              item.id
+            )
           }
           queue.sent = false
           historyItems.value = [
