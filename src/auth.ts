@@ -17,17 +17,24 @@ export function useSpotifyRedirect(
 
   const client = new SpotifyWebApi()
 
+  const location = document.location
+  const url = new URL('https://accounts.spotify.com/authorize')
+  url.searchParams.append('client_id', '2c23b47cf7274b24b1a34382a32ac94b')
+  url.searchParams.append('response_type', 'token')
+  url.searchParams.append(
+    'redirect_uri',
+    `${location.protocol}//${location.hostname}${
+      location.port === '80' ? '' : ':' + location.port
+    }${location.pathname}`
+  )
+  url.searchParams.append('scope', scopes.join(','))
+  const authUrl = (url.toString() as unknown) as Location
+
   onUnmounted(() => {
     if (refresh.value) clearInterval(refresh.value)
   })
 
   onMounted(async () => {
-    const url = new URL('https://accounts.spotify.com/authorize')
-    url.searchParams.append('client_id', '2c23b47cf7274b24b1a34382a32ac94b')
-    url.searchParams.append('response_type', 'token')
-    url.searchParams.append('redirect_uri', document.location.toString())
-    url.searchParams.append('scope', scopes.join(','))
-
     if ($route.hash.includes('access_token')) {
       const params = new URLSearchParams($route.hash.replace(/^#/gim, ''))
       const token = params.get('access_token')
@@ -37,7 +44,7 @@ export function useSpotifyRedirect(
         await onInit()
       }
     } else {
-      document.location = (url.toString() as unknown) as Location
+      document.location = authUrl
     }
 
     if (onRefresh) {
@@ -45,5 +52,9 @@ export function useSpotifyRedirect(
     }
   })
 
-  return { client }
+  function reauth() {
+    document.location = authUrl
+  }
+
+  return { client, reauth }
 }

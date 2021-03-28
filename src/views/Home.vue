@@ -67,12 +67,6 @@
 
         <b-row class="mt-2">
           <b-col cols="4">
-            <b-row v-if="state.device">
-              <b-col>
-                Volume: {{ state.device.volume_percent }}
-                <b-icon-volume-up-fill scale="2.0" class="mr-2 ml-2" />
-              </b-col>
-            </b-row>
             <b-row v-if="settings.autoQueueEnabled && queue.track">
               <b-col>
                 <b class="d-block">
@@ -198,6 +192,7 @@
 </template>
 
 <script lang="ts">
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import {
   computed,
   defineComponent,
@@ -267,17 +262,17 @@ export default defineComponent({
       volume: 0 as number | null | undefined,
     })
 
-    const { settings } = usePersistedSettings({
+    const { settings }: { settings: Settings } = usePersistedSettings({
       timeLimitEnabled: false,
       timeLimitSeconds: 100,
       autoQueueEnabled: false,
       autoQueueTarget: 140,
-      autoQueueRange: 10,
+      autoQueueRange: 6,
       autoFadeEnabled: false,
     })
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client } = useSpotifyRedirect($route, update, update)
+    const { client, reauth } = useSpotifyRedirect($route, update, update)
     const clock = useClock()
     const devices = useDevices(client)
 
@@ -298,11 +293,8 @@ export default defineComponent({
 
         playback.value = await client.getMyCurrentPlaybackState()
       } catch (err) {
-        if (err.status === 401 && err.responseText) {
-          const { error: errorObj } = JSON.parse(err.responseText)
-          error.value = errorObj
-        }
         console.error(err)
+        if (err.status === 401) reauth() // Authenticated, redirect to loginUrl.
       }
     }
 
@@ -323,7 +315,7 @@ export default defineComponent({
       const current = seconds.value
       const left = Math.max(end - current, 0).toFixed(0)
       const pct = ((current / end) * 100).toFixed(0)
-      return current / end < 0.1 ? '' : `${pct}% (${left} seconds left)`
+      return current / end < 0.1 ? '' : `${pct}% (${left} sec left)`
     })
 
     watch(
@@ -338,10 +330,10 @@ export default defineComponent({
             queue.track?.id !== id
           ) {
             console.warn(
-              'New played item was not as queued, expected: ',
-              queue.track,
+              '[Queue] New played item was not as queued, expected: ',
+              `${queue.track.title} (${queue.track.id})`,
               'got:',
-              item.id
+              `${item.name} (${item.id})`
             )
           }
           queue.sent = false
@@ -395,10 +387,10 @@ export default defineComponent({
             const seed = Math.round(Math.random() * p.length)
             const t = matching[seed % matching.length]
             queue.track = t
-            console.log('Added track for queuing', t.title, t.bpm)
+            console.log('[Queue] Added track for queuing', t.title, t.bpm)
             return
           } else {
-            console.warn('No track to queue given', target, '±', range)
+            console.warn('[Queue] No track to queue given', target, '±', range)
           }
         } else {
           queue.track = undefined
@@ -419,61 +411,22 @@ export default defineComponent({
 
       if (settings.autoQueueEnabled && passed(s, secondsMax.value - 5)) {
         if (queue.track && !queue.sent) {
-          console.log('Queued track:', queue.track.title, queue.track.bpm)
+          console.log(
+            '[Queue] Queued track:',
+            queue.track.title,
+            queue.track.bpm
+          )
           await client.queue(`spotify:track:${queue.track.id}`)
           queue.sent = true
         }
       }
 
       if (settings.autoFadeEnabled && passed(s, secondsMax.value - 5)) {
-        /* Go down */
-
-        if (!fading.fadedown) {
-          const p = (fading.volume = playback.value?.device.volume_percent)
-          if (p) {
-            console.log('Starting to fade down from', p, '->', 0)
-            setTimeout(() => client.setVolume(Math.round(p * 0.9)), 0)
-            setTimeout(() => client.setVolume(Math.round(p * 0.8)), 500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.7)), 1000)
-            setTimeout(() => client.setVolume(Math.round(p * 0.6)), 1500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.5)), 2000)
-            setTimeout(() => client.setVolume(Math.round(p * 0.4)), 2500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.3)), 3500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.2)), 4000)
-            setTimeout(() => client.setVolume(Math.round(p * 0.1)), 4500)
-            setTimeout(() => client.setVolume(0), 5000)
-
-            fading.fadedown = true
-            return
-          }
-        }
+        startFadeDown()
       }
 
       if (settings.autoFadeEnabled && !passed(s, 5)) {
-        if (fading.fadedown && !fading.fadeup) {
-          const p = fading.volume
-          if (p) {
-            console.log('Starting to fade up from 0 ->', p)
-            setTimeout(() => client.setVolume(Math.round(p * 0.1)), 0)
-            setTimeout(() => client.setVolume(Math.round(p * 0.2)), 500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.3)), 1000)
-            setTimeout(() => client.setVolume(Math.round(p * 0.4)), 1500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.5)), 2000)
-            setTimeout(() => client.setVolume(Math.round(p * 0.6)), 2500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.7)), 3500)
-            setTimeout(() => client.setVolume(Math.round(p * 0.8)), 4000)
-            setTimeout(() => client.setVolume(Math.round(p * 0.9)), 4500)
-            setTimeout(() => {
-              client.setVolume(p).finally(() => {
-                fading.fadeup = false
-                fading.fadedown = false
-              })
-            }, 5000)
-
-            fading.fadeup = true
-            return
-          }
-        }
+        startFadeUp()
       }
     })
 
@@ -490,8 +443,87 @@ export default defineComponent({
       }
     }
 
+    async function startFadeDown() {
+      return new Promise<void>(resolve => {
+        if (!fading.fadedown) {
+          const p = (fading.volume = playback.value?.device.volume_percent)
+          if (p) {
+            console.log('[Fade] Starting to fade down from', p, '->', 0)
+            setTimeout(() => client.setVolume(Math.round(p * 0.9)), 0)
+            setTimeout(() => client.setVolume(Math.round(p * 0.8)), 500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.7)), 1000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.6)), 1500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.5)), 2000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.4)), 2500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.3)), 3500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.2)), 4000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.1)), 4500)
+            setTimeout(() => resolve(client.setVolume(0)), 5000)
+
+            fading.fadedown = true
+          } else {
+            return resolve()
+          }
+        } else {
+          return resolve()
+        }
+      })
+    }
+
+    async function startFadeUp() {
+      return new Promise<void>(resolve => {
+        if (fading.fadedown && !fading.fadeup) {
+          const p = fading.volume
+          if (p) {
+            console.log('[Fade] Starting to fade up from 0 ->', p)
+            setTimeout(() => client.setVolume(Math.round(p * 0.1)), 0)
+            setTimeout(() => client.setVolume(Math.round(p * 0.2)), 500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.3)), 1000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.4)), 1500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.5)), 2000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.6)), 2500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.7)), 3500)
+            setTimeout(() => client.setVolume(Math.round(p * 0.8)), 4000)
+            setTimeout(() => client.setVolume(Math.round(p * 0.9)), 4500)
+            setTimeout(() => {
+              resolve(
+                client.setVolume(p).finally(() => {
+                  fading.fadeup = false
+                  fading.fadedown = false
+                })
+              )
+            }, 5000)
+
+            fading.fadeup = true
+          } else {
+            resolve()
+          }
+        } else {
+          resolve()
+        }
+      })
+    }
+
     async function playNext() {
-      await client.skipToNext()
+      if (settings.autoQueueEnabled && queue.track && !queue.sent) {
+        settings.timeLimitEnabled = false
+        settings.autoFadeEnabled = false
+
+        console.log('[Skip]: Queuing: ', queue.track.title)
+        await client.queue(`spotify:track:${queue.track.id}`)
+        queue.sent = true
+
+        console.log('[Skip]: Fade out!')
+        await startFadeDown()
+
+        console.log('[Skip]: Skipping to queued item!')
+        await client.skipToNext()
+
+        settings.autoFadeEnabled = true
+        settings.timeLimitEnabled = true
+      } else {
+        await client.skipToNext()
+      }
     }
     async function playPrev() {
       await client.skipToPrevious()

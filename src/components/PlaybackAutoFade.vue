@@ -15,7 +15,6 @@
         <b-progress
           height="2.5rem"
           :max="100"
-          class=""
           v-if="volume !== null && volume !== undefined"
         >
           <b-progress-bar
