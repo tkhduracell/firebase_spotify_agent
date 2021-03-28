@@ -33,7 +33,7 @@
           class="custom"
           min="0"
           max="20"
-          step="5"
+          step="2"
           size="lg"
           :value="range"
           @change="$emit('update:range', parseInt($event))"
