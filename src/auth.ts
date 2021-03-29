@@ -24,7 +24,7 @@ export function useSpotifyRedirect(
   url.searchParams.append(
     'redirect_uri',
     `${location.protocol}//${location.hostname}${
-      location.port === '80' ? '' : ':' + location.port
+      location.port ? ':' + location.port : ''
     }${location.pathname}`
   )
   url.searchParams.append('scope', scopes.join(','))
