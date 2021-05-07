@@ -2,18 +2,12 @@
   <div class="limiter-control">
     <b-row class="no-gutters" align-v="center">
       <b-col cols="auto">
-        <b-form-checkbox
-          :checked="enabled"
-          @change="$emit('update:enabled', $event)"
-          class="check-button"
-          switch
-          size="lg"
-        />
+        <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Skip to next after</b-col>
       <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
         <b-button
-          :disabled="!enabled"
+          :disabled="!enabled || progress + 10 > sec"
           class="fixed mr-1"
           size="lg"
           variant="primary"
@@ -45,6 +39,7 @@ export default defineComponent({
   name: 'PlaybackLimiter',
   props: {
     value: { type: Number, required: true },
+    progress: { type: Number, required: true },
     enabled: { type: Boolean, required: true },
   },
   setup() {
