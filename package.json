@@ -54,7 +54,10 @@
       "ecmaVersion": 2020
     },
     "rules": {
-      "semi": "off"
+      "semi": "off",
+      "max-len": [
+        "error", { "code": 140 }
+      ]
     }
   },
   "browserslist": [
@@ -63,5 +66,5 @@
     "not dead"
   ],
   "_id": "spotify_agent@0.1.0",
-  "readme": "ERROR: No README data found!"
+  "readme": "readme.md"
 }
