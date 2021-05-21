@@ -1,7 +1,7 @@
 <template>
   <b-container fluid="lg" class="home">
     <b-row v-if="state && state.item" class="state" align-v="stretch">
-      <b-col cols="7" align-self="center">
+      <b-col cols-sm="12" cols-md="12" cols-lg="7" align-self="center">
         <div v-if="current" :class="['bpm', isCurrentWithinRange ? '' : 'warntempo']">{{ current.bpm.toFixed() }} BPM</div>
 
         <div class="header">
@@ -56,8 +56,9 @@
         <PlaybackAutoFade
           :enabled="settings.autoFadeEnabled"
           @update:enabled="settings.autoFadeEnabled = $event"
-          :volume="playback.device.volume_percent"
+          :volume="playback.device.volume_percent || 0"
           :is-fading="fading.fadedown || fading.fadeup"
+          @update:volume="updateVolume"
           v-if="playback"
         />
 
@@ -65,7 +66,7 @@
           <b-col cols="6">
             <b-row v-if="settings.autoQueueEnabled && queue.track">
               <b-col class="nextup">
-                <b class="label d-block"> Next up ({{ queue.sent ? 'queued' : 'suggested' }}) </b>
+                <b class="d-block"> Next up {{ queue.sent ? ' - Queued!' : '' }}</b>
                 <div class="artist" v-text="queue.track.artist" />
                 <div class="title" v-text="queue.track.title" />
                 <div class="tempo" v-text="queue.track.bpm.toFixed(0)" />
@@ -75,14 +76,14 @@
           </b-col>
           <b-col cols="6">
             <b class="d-block">Last {{ historyItems.length }} played items</b>
-            <div v-for="(l, idx) in historyItems" :key="'h-' + l.id + '-idx-' + idx" v-text="trackFormat(l, true)" />
+            <div v-for="l in historyItems" :key="'h-' + l.id" v-text="trackFormat(l, true)" />
             <div v-if="historyItems.length === 0">
               None so far...
             </div>
           </b-col>
         </b-row>
       </b-col>
-      <b-col cols="5" align-self="stretch">
+      <b-col cols="5" align-self="stretch" class="d-none d-lg-block">
         <b-img
           v-for="img in state.item.album.images.filter(i => i.width === 640)"
           :key="img.url"
@@ -111,9 +112,7 @@
       <b-col class="mt-4" offset="3" cols="6">
         <HelpContent
           :devices="devices ? devices.devices : undefined"
-          :device="device"
-          @play="play"
-          @devices:select="device = $event"
+          @play="play($event.id, $event.device)"
           @devices:reload="loadDevices"
         />
       </b-col>
@@ -125,6 +124,7 @@
 
 <script lang="ts">
 /* eslint-disable @typescript-eslint/no-use-before-define */
+/* eslint-disable @typescript-eslint/camelcase */
 import { computed, defineComponent, reactive, ref, toRef, watch } from '@vue/composition-api'
 
 import PlaybackLimiter from '@/components/PlaybackLimiter.vue'
@@ -206,12 +206,15 @@ export default defineComponent({
     const tracks = new TrackDatabase(client)
 
     function trackFormat(track: TrackWithBPM, showBPM = false): string {
-      const bpmSuffix = showBPM ? ' (' + track.bpm.toFixed() + ' bpm)' : ''
-      return `${track.artist} - ${track.title}${bpmSuffix}`
+      const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
+      return `${prefix}${track.artist} - ${track.title}`
+    }
+
+    function devOpts() {
+      return state.value?.device?.id ? { device_id: state.value.device.id } : {}
     }
 
     async function init() {
-      await client.setShuffle(true)
       await update()
     }
 
@@ -258,7 +261,7 @@ export default defineComponent({
               `${item.name} (${item.id})\n`,
               'Skipping to next!'
             )
-            await client.skipToNext()
+            await client.skipToNext(devOpts())
           }
           queue.sent = false
           historyItems.value = [await tracks.getTrackWithTempo(toSimple(item)), ...historyItems.value].slice(0, 7)
@@ -340,20 +343,19 @@ export default defineComponent({
       }
 
       if (settings.autoFadeEnabled && passed(s, secondsMax.value - 5)) {
-        startFadeDown(playback.value?.device.volume_percent ?? undefined)
+        startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
       }
 
       if (settings.autoFadeEnabled && !passed(s, 5)) {
-        startFadeUp()
+        startFadeUp(devOpts())
       }
     })
 
-    async function play(context: string, device?: SpotifyApi.UserDevice) {
-      if (context && typeof context === 'string') {
-        // eslint-disable-next-line @typescript-eslint/camelcase
+    async function play(context_uri: string, device?: SpotifyApi.UserDevice) {
+      if (context_uri && typeof context_uri === 'string') {
         const dev = device && device.id ? { device_id: device.id } : {}
-        // eslint-disable-next-line @typescript-eslint/camelcase
-        await client.play({ context_uri: context, ...dev })
+        await client.play({ context_uri, ...dev })
+        await client.setShuffle(true, { ...dev })
       } else if (state.value && state.value.is_playing) {
         await client.pause()
       } else {
@@ -367,24 +369,30 @@ export default defineComponent({
         settings.autoFadeEnabled = false
 
         console.log('[Skip]: Queuing: ', queue.track.title)
-        await client.queue(`spotify:track:${queue.track.id}`)
+        await client.queue(`spotify:track:${queue.track.id}`, devOpts())
         queue.sent = true
 
         console.log('[Skip]: Fade out!')
-        await startFadeDown(playback.value?.device.volume_percent ?? undefined)
+        await startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
 
         console.log('[Skip]: Skipping to queued item!')
-        await client.skipToNext()
+        await client.skipToNext(devOpts())
 
         settings.autoFadeEnabled = true
         settings.timeLimitEnabled = true
       } else {
-        await client.skipToNext()
+        await client.skipToNext(devOpts())
       }
     }
 
     async function playPrev() {
       await client.skipToPrevious()
+    }
+
+    async function updateVolume(vol: number) {
+      if (vol !== null && vol !== undefined) {
+        await client.setVolume(vol, devOpts())
+      }
     }
 
     return {
@@ -410,6 +418,7 @@ export default defineComponent({
       playback,
       fading,
       isCurrentWithinRange,
+      updateVolume,
     }
   },
 })

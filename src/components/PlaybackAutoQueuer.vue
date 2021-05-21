@@ -17,7 +17,7 @@
           class="custom"
           min="80"
           max="200"
-          step="10"
+          step="5"
           size="lg"
           :value="target"
           @change="$emit('update:target', parseInt($event))"

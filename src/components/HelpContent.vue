@@ -18,27 +18,36 @@
       one below.
     </p>
     <p>
-      <b>Start a playlist</b>
+      <b>Start playing on a device</b>
     </p>
     <div class="mb-4">
-      <b-button variant="outline-primary" @click="$emit('devices:reload')" class="mr-2">
-        <b-icon-arrow-counterclockwise />
-      </b-button>
-      <b-form-select :value="device" @change="$emit('devices:select', $event)" v-if="devices" class="w-50 mr-2">
-        <b-form-select-option v-for="dev in devices" :key="dev.id" :value="dev"> {{ dev.name }} ({{ dev.type }}) </b-form-select-option>
-      </b-form-select>
-      <b-button
-        variant="outline-primary"
-        @click="
-          $emit('play', {
-            id: 'spotify:playlist:7te7WrFpNb1rjk0WRarnNR',
-            device,
-          })
-        "
-      >
-        <b-icon-play />
-        Freesprut Buggisar
-      </b-button>
+      <b-table-simple table-variant="dark" dark borderless>
+        <b-tr class="device-row mb-2" v-for="device in devices || []" :key="device.id">
+          <b-td class="">
+            <b-icon-speaker scale="1.6" v-if="device.type === 'Speaker'" />
+            <b-icon-laptop scale="1.6" v-else-if="device.type === 'Computer'" />
+            <b-icon-tv scale="1.6" v-else-if="device.type === 'Chromecast'" />
+            <b-icon-phone scale="1.6" v-else-if="device.type === 'Smartphone'" />
+            <b-icon-box scale="1.6" v-else />
+          </b-td>
+          <b-td>
+            <span class="pt-1 ml-4 d-inline-block mr-4" v-text="device.name" />
+          </b-td>
+          <b-td>
+            <b-button
+              variant="primary"
+              @click="
+                $emit('play', {
+                  id: 'spotify:playlist:7te7WrFpNb1rjk0WRarnNR',
+                  device,
+                })
+              "
+            >
+              <b-icon-play-fill scale="1.2" />
+            </b-button>
+          </b-td>
+        </b-tr>
+      </b-table-simple>
     </div>
     <h4>Current features</h4>
     <ul>
@@ -50,7 +59,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from '@vue/composition-api'
+import { defineComponent, onMounted, onUnmounted, PropType } from '@vue/composition-api'
+import { useInterval } from 'vue-composable'
 
 export default defineComponent({
   props: {
@@ -58,10 +68,14 @@ export default defineComponent({
       type: Array as PropType<SpotifyApi.UserDevice[]>,
       required: false,
     },
-    device: {
-      type: Object as PropType<SpotifyApi.UserDevice>,
-      required: false,
-    },
+  },
+  setup(props, { emit }) {
+    const { start, remove } = useInterval(() => emit('devices:reload'), 2000)
+
+    onMounted(start)
+    onUnmounted(remove)
+
+    return {}
   },
 })
 </script>

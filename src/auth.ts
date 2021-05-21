@@ -1,5 +1,6 @@
-import { onMounted, onUnmounted, ref } from '@vue/composition-api'
+import { onMounted, onUnmounted } from '@vue/composition-api'
 import SpotifyWebApi from 'spotify-web-api-js'
+import { useInterval } from 'vue-composable'
 import { Route } from 'vue-router'
 
 export function useSpotifyRedirect(
@@ -13,8 +14,6 @@ export function useSpotifyRedirect(
     'user-read-recently-played',
   ]
 ) {
-  const refresh = ref<number>()
-
   const client = new SpotifyWebApi()
 
   const location = document.location
@@ -23,16 +22,14 @@ export function useSpotifyRedirect(
   url.searchParams.append('response_type', 'token')
   url.searchParams.append(
     'redirect_uri',
-    `${location.protocol}//${location.hostname}${
-      location.port ? ':' + location.port : ''
-    }${location.pathname}`
+    `${location.protocol}//${location.hostname}${location.port ? ':' + location.port : ''}${location.pathname}`
   )
   url.searchParams.append('scope', scopes.join(','))
   const authUrl = (url.toString() as unknown) as Location
 
-  onUnmounted(() => {
-    if (refresh.value) clearInterval(refresh.value)
-  })
+  const { start, remove } = useInterval(onRefresh ? () => onRefresh() : () => null, 1000)
+
+  onUnmounted(remove)
 
   onMounted(async () => {
     if ($route.hash.includes('access_token')) {
@@ -46,10 +43,7 @@ export function useSpotifyRedirect(
     } else {
       document.location = authUrl
     }
-
-    if (onRefresh) {
-      refresh.value = setInterval(onRefresh, 1000)
-    }
+    start()
   })
 
   function reauth() {

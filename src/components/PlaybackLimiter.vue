@@ -5,24 +5,26 @@
         <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Skip to next after</b-col>
-      <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
+      <b-col v-for="(sec, idx) in fixed" :key="'set-' + sec" cols="auto">
         <b-button
           :disabled="!enabled || progress + 10 > sec"
-          class="fixed mr-1"
+          :class="['fixed', 'mr-1', idx > 3 ? 'd-none d-xl-block' : '']"
           size="lg"
           variant="primary"
           @click="$emit('update:value', sec)"
           v-text="sec"
         />
       </b-col>
-      <b-col class="mr-2"
-        ><b-form-input
+      <b-col class="mr-2">
+        <b-form-spinbutton
           :disabled="!enabled"
           size="lg"
-          type="number"
+          :step="10"
+          :min="Math.max(10.0 * Math.ceil(progress / 10.0) + 10, 30)"
+          :max="86400"
           class="custom"
-          :value="value + ''"
-          @update="$emit('update:value', parseInt($event))"
+          :value="value"
+          @change="$emit('update:value', Math.max(10.0 * Math.ceil(progress / 10.0) + 10, parseInt($event)))"
         />
       </b-col>
       <b-col class="label last" cols="auto">sec</b-col>
@@ -44,7 +46,7 @@ export default defineComponent({
   },
   setup() {
     return {
-      fixed: [30, 60, 90, 120],
+      fixed: [30, 60, 90, 120, 150, 200],
     }
   },
 })

@@ -2,31 +2,43 @@
   <div class="queuer">
     <b-row class="no-gutters" align-v="center">
       <b-col cols="auto">
-        <b-form-checkbox
-          :checked="enabled"
-          @change="$emit('update:enabled', $event)"
-          class="check-button"
-          switch
-          size="lg"
-        />
+        <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Auto fade</b-col>
-      <b-col class="mt-2 mr-2">
-        <b-progress
-          height="2.5rem"
-          :max="100"
-          v-if="volume !== null && volume !== undefined"
+      <b-col class="mr-2 mt-2" cols="auto">
+        <b-button
+          size="small"
+          class="d-inline"
+          :disabled="isFading || volume <= 0"
+          @click="$emit('update:volume', Math.max(volume - 10, 0))"
         >
+          <b-icon-dash />
+        </b-button>
+      </b-col>
+
+      <b-col class="mt-2 mr-2 bar">
+        <b-progress height="2.5rem" :max="100" v-if="volume !== null && volume !== undefined">
           <b-progress-bar
             variant="secondary"
             :animated="isFading"
             :value="volume"
-            :label="volume > 15 ? 'Volume: ' + volume + '%' : ''"
+            :label="volume > 15 ? 'Volume ' + volume + '' : ''"
           ></b-progress-bar>
         </b-progress>
       </b-col>
-      <b-col cols="auto" class="label last pl-1 pt-1" v-if="volume">
-        <b-icon-speaker-fill scale="1.2" />
+      <b-col class="mr-2 mt-2" cols="auto">
+        <b-button
+          size="small"
+          class="d-inline"
+          :disabled="isFading || volume >= 100"
+          @click="$emit('update:volume', Math.min(volume + 10, 100))"
+        >
+          <b-icon-plus />
+        </b-button>
+      </b-col>
+
+      <b-col cols="auto" class="label last pl-1 pt-1">
+        <b-icon-percent scale="1.3" />
       </b-col>
     </b-row>
   </div>
@@ -39,7 +51,7 @@ export default defineComponent({
   name: 'PlaybackAutoFade',
   props: {
     enabled: { type: Boolean, required: true },
-    volume: { type: Number, required: false },
+    volume: { type: Number, required: true },
     isFading: { type: Boolean, required: false },
   },
 })
@@ -60,6 +72,10 @@ export default defineComponent({
   }
   .check-button {
     margin-top: 0.2em;
+  }
+  .bar .progress-bar {
+    font-weight: bold;
+    font-size: 1.4rem;
   }
 }
 </style>

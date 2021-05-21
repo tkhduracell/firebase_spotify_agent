@@ -1,18 +1,13 @@
 import { computed, onMounted, onUnmounted, ref } from '@vue/composition-api'
+import { useInterval } from 'vue-composable'
 
 export function useClock() {
-  const handle = ref<number>()
   const clock = ref(new Date())
-  onMounted(() => {
-    handle.value = setInterval(() => {
-      clock.value = new Date()
-    }, 5)
-  })
-  onUnmounted(() => {
-    if (handle.value) {
-      clearInterval(handle.value)
-    }
-  })
+
+  const { start, remove } = useInterval(() => (clock.value = new Date()), 1000)
+
+  onMounted(start)
+  onUnmounted(remove)
 
   const hhmm = computed(() => {
     const h = clock.value.getHours()
