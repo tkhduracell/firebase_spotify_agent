@@ -1,10 +1,5 @@
 <template>
-  <div
-    class="playlist-badge user-select-none"
-    @click="open()"
-    router-tag="div"
-    target="_blank"
-  >
+  <div class="playlist-badge user-select-none" @click="open()" router-tag="div" target="_blank">
     <div class="img">
       <b-img :src="cover" fluid />
     </div>
@@ -85,8 +80,6 @@ export default defineComponent({
 
     margin-left: 0.4em;
     margin-right: 0.4em;
-    .name {
-    }
     .owner {
       text-align: left;
     }

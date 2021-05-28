@@ -7,12 +7,7 @@ export function useSpotifyRedirect(
   $route: Route,
   onInit?: () => unknown,
   onRefresh?: () => unknown,
-  scopes = [
-    'user-read-playback-state',
-    'user-modify-playback-state',
-    'user-read-currently-playing',
-    'user-read-recently-played',
-  ]
+  scopes = ['user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing', 'user-read-recently-played']
 ) {
   const client = new SpotifyWebApi()
 

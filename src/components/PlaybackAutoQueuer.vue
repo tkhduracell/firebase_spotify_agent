@@ -2,13 +2,7 @@
   <div class="queuer">
     <b-row class="no-gutters" align-v="center">
       <b-col cols="auto">
-        <b-form-checkbox
-          :checked="enabled"
-          @change="$emit('update:enabled', $event)"
-          class="check-button"
-          switch
-          size="lg"
-        />
+        <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Auto queue</b-col>
       <b-col class="mr-2"

@@ -4,18 +4,10 @@ import { chunk, flatten } from 'lodash'
 export type TrackSimple = { title: string; artist: string; id: string }
 export type TrackWithBPM = TrackSimple & { bpm: number }
 
-export function toSimple(
-  track:
-    | SpotifyApi.PlaylistTrackObject['track']
-    | SpotifyApi.PlayHistoryObject['track']
-): TrackSimple {
+export function toSimple(track: SpotifyApi.PlaylistTrackObject['track'] | SpotifyApi.PlayHistoryObject['track']): TrackSimple {
   const type = track.type ?? 'track'
   if (type === 'track') {
-    const {
-      id,
-      name: title,
-      artists,
-    } = track as SpotifyApi.TrackObjectSimplified
+    const { id, name: title, artists } = track as SpotifyApi.TrackObjectSimplified
     return {
       id,
       title,
@@ -34,9 +26,7 @@ export class TrackDatabase {
     this.client = client
   }
 
-  async getPlaylistTrackWithTempo({
-    track,
-  }: SpotifyApi.PlaylistTrackObject): Promise<TrackWithBPM> {
+  async getPlaylistTrackWithTempo({ track }: SpotifyApi.PlaylistTrackObject): Promise<TrackWithBPM> {
     return this.getTrackWithTempo(toSimple(track))
   }
 
@@ -74,9 +64,7 @@ export class TrackDatabase {
       })
     )
     const fetched = flatten(missingChunked)
-    const loaded = await Promise.all(
-      present.map(async t => await this.getTrackWithTempo(t))
-    )
+    const loaded = await Promise.all(present.map(async t => await this.getTrackWithTempo(t)))
 
     return [...loaded, ...fetched]
   }

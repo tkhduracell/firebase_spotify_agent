@@ -21,17 +21,14 @@ export class PlaylistDatabase {
 
   private async fetchPlaylist(id: string): Promise<TrackSimple[]> {
     const { items, next } = await this.client.getPlaylistTracks(id, {
-      fields:
-        'limit,next,offset,previous,total,items(track(id,name,artists(name)))',
+      fields: 'limit,next,offset,previous,total,items(track(id,name,artists(name)))',
     })
 
     let all = items.map(i => toSimple(i.track))
     let i = 0
     let cursor = next
     while (cursor && i++ < 100) {
-      const { items, next } = (await this.client.getGeneric(
-        cursor
-      )) as SpotifyApi.PlaylistTrackResponse
+      const { items, next } = (await this.client.getGeneric(cursor)) as SpotifyApi.PlaylistTrackResponse
       const plucked = items.map(i => toSimple(i.track))
       all = [...all, ...plucked]
       cursor = next

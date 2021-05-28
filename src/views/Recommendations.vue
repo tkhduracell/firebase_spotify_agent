@@ -3,13 +3,7 @@
     <b-row align-h="center">
       <b-col cols="auto">
         <b-form-group label="BPM" v-slot="{ ariaDescribedby }">
-          <b-spinbutton
-            v-model="tempo"
-            min="80"
-            max="210"
-            step="5"
-            :aria-describedby="ariaDescribedby"
-          />
+          <b-spinbutton v-model="tempo" min="80" max="210" step="5" :aria-describedby="ariaDescribedby" />
         </b-form-group>
       </b-col>
       <b-col cols="3">
@@ -24,31 +18,19 @@
       </b-col>
       <b-col cols="3">
         <b-form-group label="Genres" v-slot="{ ariaDescribedby }">
-          <b-form-checkbox-group
-            v-model="seed_artists"
-            :options="options_genres"
-            name="seed_genres"
-            :aria-describedby="ariaDescribedby"
-          />
+          <b-form-checkbox-group v-model="seed_artists" :options="options_genres" name="seed_genres" :aria-describedby="ariaDescribedby" />
         </b-form-group>
       </b-col>
       <b-col cols="3">
         <b-form-group label="Tracks" v-slot="{ ariaDescribedby }">
-          <b-form-checkbox-group
-            v-model="seed_artists"
-            :options="options_tracks"
-            name="seed_tracks"
-            :aria-describedby="ariaDescribedby"
-          />
+          <b-form-checkbox-group v-model="seed_artists" :options="options_tracks" name="seed_tracks" :aria-describedby="ariaDescribedby" />
         </b-form-group>
       </b-col>
     </b-row>
     <b-row class="state mt-4" v-if="tracks && recs">
       <b-col cols="12" v-for="t in tracks" :key="t.id">
         <div class="d-flex flex-wrap">
-          <b-link class="" variant="link" href="#" @click="play(t)"
-            >{{ t.bpm.toFixed() }} - {{ t.artist }} - {{ t.title }}
-          </b-link>
+          <b-link class="" variant="link" href="#" @click="play(t)">{{ t.bpm.toFixed() }} - {{ t.artist }} - {{ t.title }} </b-link>
         </div>
       </b-col>
     </b-row>
@@ -132,11 +114,7 @@ export default defineComponent({
 
     const tracks = ref<TrackWithBPM[]>()
     watch(recs, async r => {
-      tracks.value = !r
-        ? []
-        : await Promise.all(
-            r.tracks.map(t => db.getTrackWithTempo(toSimple(t)))
-          )
+      tracks.value = !r ? [] : await Promise.all(r.tracks.map(t => db.getTrackWithTempo(toSimple(t))))
     })
 
     async function play(track: TrackWithBPM) {

@@ -2,13 +2,7 @@
   <div id="app">
     <b-navbar toggleable="lg" type="dark" variant="info" id="nav">
       <b-navbar-brand to="/">
-        <img
-          src="favicon.svg"
-          class="d-inline-block align-top mr-2"
-          alt="SA logo"
-          height="30em"
-          width="30em"
-        />
+        <img src="favicon.svg" class="d-inline-block align-top mr-2" alt="SA logo" height="30em" width="30em" />
         Spotify Agent
       </b-navbar-brand>
 
@@ -16,18 +10,9 @@
 
       <b-collapse id="nav-collapse" is-nav>
         <b-navbar-nav>
-          <b-nav-item
-            active-class="active"
-            exact
-            :to="{ name: 'Home', hash: $route.hash }"
-            >Home</b-nav-item
-          >
-          <b-nav-item active-class="active" :to="{ name: 'About' }"
-            >About</b-nav-item
-          >
-          <b-nav-item active-class="active" :to="{ name: 'Recommendations' }"
-            >Recommendations</b-nav-item
-          >
+          <b-nav-item active-class="active" exact :to="{ name: 'Home', hash: $route.hash }">Home</b-nav-item>
+          <b-nav-item active-class="active" :to="{ name: 'About' }">About</b-nav-item>
+          <b-nav-item active-class="active" :to="{ name: 'Recommendations' }">Recommendations</b-nav-item>
         </b-navbar-nav>
 
         <!-- Right aligned nav items -->
