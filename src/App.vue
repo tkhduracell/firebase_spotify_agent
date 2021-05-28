@@ -11,8 +11,8 @@
       <b-collapse id="nav-collapse" is-nav>
         <b-navbar-nav>
           <b-nav-item active-class="active" exact :to="{ name: 'Home', hash: $route.hash }">Home</b-nav-item>
+          <b-nav-item active-class="active" :to="{ name: 'Recommendations' }">Song finder</b-nav-item>
           <b-nav-item active-class="active" :to="{ name: 'About' }">About</b-nav-item>
-          <b-nav-item active-class="active" :to="{ name: 'Recommendations' }">Recommendations</b-nav-item>
         </b-navbar-nav>
 
         <!-- Right aligned nav items -->
