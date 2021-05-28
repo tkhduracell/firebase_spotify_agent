@@ -4,8 +4,9 @@
       <b-img :src="cover" fluid />
     </div>
     <div class="text">
+      <div class="header">Spelar från</div>
       <div class="name" v-text="context.name" />
-      <div class="owner" v-text="' av ' + context.owner.display_name" />
+      <div class="owner" v-text="context.owner.display_name" />
     </div>
   </div>
 </template>
@@ -39,34 +40,27 @@ export default defineComponent({
 
 <style scoped lang="scss">
 .playlist-badge {
-  background: #28292d;
-  border: rgba(255, 255, 255, 0.452) 2px solid;
-  border-radius: 6px;
-
   display: inline-flex;
-  justify-content: stretch;
+  flex-direction: row-reverse;
+  height: 64px;
 
   transition: all 300ms;
 
   transform: scale(1);
-  box-shadow: 0 0.2rem 0.2rem rgba(255, 255, 255, 0.075) !important;
+  margin-right: 0px;
 
   &:hover {
     cursor: pointer;
     transform: scale(1.05);
-    box-shadow: 0 0.6rem 2rem rgba(255, 255, 255, 0.175) !important;
+    margin-right: 6px;
   }
 
   &:active {
     transform: scale(1.02);
-    box-shadow: 0 0.6rem 2rem rgba(255, 255, 255, 0.175) !important;
-    background: #484a4e;
   }
 
   .img {
-    display: inline-flex;
-    justify-content: center;
-    height: 64px;
+    height: 100%;
     img {
       border-top-left-radius: 6px;
       border-bottom-left-radius: 6px;
@@ -74,14 +68,20 @@ export default defineComponent({
   }
 
   .text {
-    display: inline-flex;
-    flex-direction: column;
-    justify-content: center;
+    font-size: 1.2rem;
+    margin-left: 10px;
+    margin-right: 10px;
+    align-self: center;
 
-    margin-left: 0.4em;
-    margin-right: 0.4em;
+    .header {
+      font-size: 0.7rem;
+      text-align: right;
+      color: #d0d0d0;
+    }
     .owner {
-      text-align: left;
+      text-align: right;
+      font-size: 1rem;
+      color: #d0d0d0;
     }
   }
 }

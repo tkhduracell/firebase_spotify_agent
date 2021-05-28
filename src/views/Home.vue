@@ -8,7 +8,7 @@
           <h1 v-if="current">{{ trackFormat(current) }}</h1>
 
           <b-row align-v="center" align-h="center">
-            <b-col cols="auto">
+            <b-col cols="auto" class="d-block d-lg-none">
               <PlaylistBadge :context="context" v-if="context" />
             </b-col>
             <b-col cols="auto">
@@ -37,40 +37,38 @@
           </b-progress>
         </div>
 
-        <PlaybackLimiter
-          :enabled="settings.timeLimitEnabled"
-          @update:enabled="settings.timeLimitEnabled = $event"
-          :value="settings.timeLimitSeconds"
-          @update:value="settings.timeLimitSeconds = $event"
-          :progress="seconds"
-          class="limiter mb-2"
-        />
-        <PlaybackAutoQueuer
-          :enabled="settings.autoQueueEnabled"
-          @update:enabled="settings.autoQueueEnabled = $event"
-          :target="settings.autoQueueTarget"
-          @update:target="settings.autoQueueTarget = $event"
-          :range="settings.autoQueueRange"
-          @update:range="settings.autoQueueRange = $event"
-        />
-        <PlaybackAutoFade
-          :enabled="settings.autoFadeEnabled"
-          @update:enabled="settings.autoFadeEnabled = $event"
-          :volume="playback.device.volume_percent || 0"
-          :is-fading="fading.fadedown || fading.fadeup"
-          @update:volume="updateVolume"
-          v-if="playback"
-        />
+        <b-overlay :show="fading.fadedown || fading.fadeup" rounded="sm" variant="dark">
+          <PlaybackLimiter
+            :enabled="settings.timeLimitEnabled"
+            @update:enabled="settings.timeLimitEnabled = $event"
+            :value="settings.timeLimitSeconds"
+            @update:value="settings.timeLimitSeconds = $event"
+            :progress="seconds"
+            class="limiter mb-2"
+          />
+          <PlaybackAutoQueuer
+            :enabled="settings.autoQueueEnabled"
+            @update:enabled="settings.autoQueueEnabled = $event"
+            :target="settings.autoQueueTarget"
+            @update:target="settings.autoQueueTarget = $event"
+            :range="settings.autoQueueRange"
+            @update:range="settings.autoQueueRange = $event"
+          />
+          <PlaybackAutoFade
+            :enabled="settings.autoFadeEnabled"
+            @update:enabled="settings.autoFadeEnabled = $event"
+            :volume="playback.device.volume_percent || 0"
+            :is-fading="fading.fadedown || fading.fadeup"
+            @update:volume="updateVolume"
+            v-if="playback"
+          />
+        </b-overlay>
 
         <b-row class="mt-2">
           <b-col cols="6">
-            <b-row v-if="settings.autoQueueEnabled && queue.track">
+            <b-row>
               <b-col class="nextup">
-                <b class="d-block"> Next up {{ queue.sent ? ' - Queued!' : '' }}</b>
-                <div class="artist" v-text="queue.track.artist" />
-                <div class="title" v-text="queue.track.title" />
-                <div class="tempo" v-text="queue.track.bpm.toFixed(0)" />
-                <p :class="{ small: true, 'text-danger': queue.pool < 10 }">selected among {{ queue.pool }} other track</p>
+                <NextUp :queue="queue" />
               </b-col>
             </b-row>
           </b-col>
@@ -83,7 +81,8 @@
           </b-col>
         </b-row>
       </b-col>
-      <b-col cols="5" align-self="stretch" class="d-none d-lg-block">
+      <b-col cols="5" class="d-none d-lg-block position-relative">
+        <PlaylistBadge :context="context" v-if="context" class="d-none d-lg-inline-flex overlay-playlist" />
         <b-img
           v-for="img in state.item.album.images.filter(i => i.width === 640)"
           :key="img.url"
@@ -132,6 +131,7 @@ import PlaybackAutoQueuer from '@/components/PlaybackAutoQueuer.vue'
 import PlaybackAutoFade from '@/components/PlaybackAutoFade.vue'
 import PlaylistBadge from '@/components/PlaylistBadge.vue'
 import HelpContent from '@/components/HelpContent.vue'
+import NextUp from '@/components/NextUp.vue'
 
 import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
@@ -139,6 +139,7 @@ import { useSpotifyRedirect } from '@/auth'
 import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
 import { useVolume } from '@/volume'
+import { QueueState } from '@/types'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -171,6 +172,7 @@ export default defineComponent({
     PlaybackAutoFade,
     PlaylistBadge,
     HelpContent,
+    NextUp,
   },
   setup(props, { root: { $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
@@ -181,7 +183,8 @@ export default defineComponent({
     const current = ref<TrackWithBPM>()
     const error = ref<SpotifyApi.ErrorObject>()
 
-    const queue = reactive({
+    const queue = reactive<QueueState>({
+      loading: true,
       sent: false,
       track: undefined as TrackWithBPM | undefined,
       pool: 0,
@@ -275,8 +278,10 @@ export default defineComponent({
       async uri => {
         if (uri) {
           const [id] = uri.split(/:/).reverse()
+          queue.loading = true
           context.value = await client.getPlaylist(id)
           playlist.value = await tracks.getTracksWithTempo(await playlists.getPlaylist(id))
+          queue.loading = false
         }
       }
     )
@@ -307,16 +312,17 @@ export default defineComponent({
       async source => {
         const [p, , target, range, enabled] = source as [TrackWithBPM[], TrackWithBPM, number, number, boolean]
         if (enabled && p.length > 0) {
+          queue.loading = true
           const matching = p.filter(t => isWithin(t.bpm, target, target + range))
           queue.pool = matching.length
 
           if (matching.length > 0) {
             queue.track = getRandomUnplayed(matching)
             console.log('[Queue] Added track for queuing', queue.track?.title, queue.track?.bpm)
-            return
           } else {
             console.warn('[Queue] No track to queue given', target, '⌥', range)
           }
+          queue.loading = false
         } else {
           queue.track = undefined
         }
@@ -439,13 +445,16 @@ export default defineComponent({
       text-align: center;
     }
     .image {
-      margin-top: 1em;
+      margin-top: 10px;
     }
     .seconds {
       background: #1b5894;
     }
     .seconds-left {
       font-size: 2em;
+    }
+    .overlay-playlist {
+      float: right;
     }
 
     .bpm {
@@ -454,7 +463,7 @@ export default defineComponent({
       text-align: center;
 
       &.warntempo {
-        color: red;
+        color: rgb(190, 146, 0);
         animation: pulse-animation 1s infinite;
       }
 
