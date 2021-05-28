@@ -23,6 +23,9 @@
       </b-collapse>
     </b-navbar>
     <router-view class="mt-4" />
+    <footer>
+      Version <span class="text-monospace" v-text="env.BUILD_GIT_COMMIT_HASH" /> - <span class="text-monospace" v-text="env.BUILD_TIME" />
+    </footer>
   </div>
 </template>
 
@@ -35,5 +38,21 @@ export default defineComponent({
     title: 'Spotify Agent',
     link: [{ rel: 'icon favicon', type: 'image/svg', href: 'favicon.svg' }],
   },
+  setup() {
+    const { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME } = process.env
+    return {
+      env: { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME },
+    }
+  },
 })
 </script>
+<style lang="scss" scoped>
+footer {
+  text-align: right;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  font-size: 0.6em;
+  padding-right: 10px;
+}
+</style>
