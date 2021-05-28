@@ -1,5 +1,13 @@
 <template>
   <b-container fluid="lg" class="recs">
+    <b-row>
+      <b-col>
+        <h1>Song finder</h1>
+        <p>
+          Here you can find new songs based on artficial intelligense. Fiddle with the data points below to get different recommendations.
+        </p>
+      </b-col>
+    </b-row>
     <b-row align-h="center">
       <b-col cols="auto">
         <b-form-group label="BPM" v-slot="{ ariaDescribedby }">
