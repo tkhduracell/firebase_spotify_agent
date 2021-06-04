@@ -24,6 +24,11 @@ const routes: Array<RouteConfig> = [
     component: () => import(/* webpackChunkName: "recommendations" */ '../views/Recommendations.vue'),
   },
   {
+    path: '/playlist',
+    name: 'PlaylistInspect',
+    component: () => import(/* webpackChunkName: "playlist-inspect" */ '../views/PlaylistInspect.vue'),
+  },
+  {
     path: '/logout',
     beforeEnter() {
       window.location = ('https://accounts.spotify.com/en/logout' as unknown) as Location

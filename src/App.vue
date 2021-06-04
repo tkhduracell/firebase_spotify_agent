@@ -12,6 +12,7 @@
         <b-navbar-nav>
           <b-nav-item active-class="active" exact :to="{ name: 'Home', hash: $route.hash }">Home</b-nav-item>
           <b-nav-item active-class="active" :to="{ name: 'Recommendations' }">Song finder</b-nav-item>
+          <b-nav-item active-class="active" :to="{ name: 'PlaylistInspect' }">Playlist Inspector</b-nav-item>
           <b-nav-item active-class="active" :to="{ name: 'About' }">About</b-nav-item>
         </b-navbar-nav>
 
@@ -49,7 +50,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 footer {
   text-align: right;
-  position: absolute;
+  position: fixed;
   bottom: 0;
   width: 100%;
   font-size: 0.6em;
