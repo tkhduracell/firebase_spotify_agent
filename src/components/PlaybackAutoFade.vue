@@ -5,7 +5,7 @@
         <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Auto fade</b-col>
-      <b-col class="mr-2 mt-2" cols="auto">
+      <b-col class="mr-2 " cols="auto">
         <b-button
           size="small"
           class="d-inline"
@@ -16,7 +16,7 @@
         </b-button>
       </b-col>
 
-      <b-col class="mt-2 mr-2 bar">
+      <b-col class=" mr-2 bar">
         <b-progress height="2.5rem" :max="100" v-if="volume !== null && volume !== undefined">
           <b-progress-bar
             variant="secondary"
@@ -26,7 +26,7 @@
           ></b-progress-bar>
         </b-progress>
       </b-col>
-      <b-col class="mr-2 mt-2" cols="auto">
+      <b-col class="mr-2 " cols="auto">
         <b-button
           size="small"
           class="d-inline"
@@ -61,7 +61,6 @@ export default defineComponent({
 .queuer {
   .label {
     font-weight: bold;
-    margin-top: 6px;
   }
   .label.main {
     max-width: 14em;
@@ -71,7 +70,6 @@ export default defineComponent({
     width: 2em;
   }
   .check-button {
-    margin-top: 0.2em;
   }
   .bar .progress-bar {
     font-weight: bold;

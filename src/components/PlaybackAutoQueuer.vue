@@ -4,7 +4,12 @@
       <b-col cols="auto">
         <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
-      <b-col class="label main mr-2" cols="auto">Auto queue</b-col>
+      <b-col class="label main mr-2" cols="auto">
+        Auto queue
+        <span class="help" v-b-tooltip.hover="'Automatically queue tracks at the specified tempo'">
+          <b-icon-question-circle-fill />
+        </span>
+      </b-col>
       <b-col class="mr-2"
         ><b-form-spinbutton
           :disabled="!enabled"
@@ -64,8 +69,9 @@ export default defineComponent({
   .label.last {
     width: 2em;
   }
-  .check-button {
-    margin-top: 0.2em;
+  .help {
+    margin-left: 4px;
+    color: #1b5894;
   }
 }
 </style>

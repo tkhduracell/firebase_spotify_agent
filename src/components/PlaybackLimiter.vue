@@ -66,7 +66,6 @@ export default defineComponent({
     width: 2em;
   }
   .check-button {
-    margin-top: 0.2em;
   }
 }
 </style>

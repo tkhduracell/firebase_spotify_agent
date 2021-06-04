@@ -44,15 +44,7 @@
             :value="settings.timeLimitSeconds"
             @update:value="settings.timeLimitSeconds = $event"
             :progress="seconds"
-            class="limiter mb-2"
-          />
-          <PlaybackAutoQueuer
-            :enabled="settings.autoQueueEnabled"
-            @update:enabled="settings.autoQueueEnabled = $event"
-            :target="settings.autoQueueTarget"
-            @update:target="settings.autoQueueTarget = $event"
-            :range="settings.autoQueueRange"
-            @update:range="settings.autoQueueRange = $event"
+            class="mb-2"
           />
           <PlaybackAutoFade
             :enabled="settings.autoFadeEnabled"
@@ -61,6 +53,28 @@
             :is-fading="fading.fadedown || fading.fadeup"
             @update:volume="updateVolume"
             v-if="playback"
+            class="mb-2"
+          />
+          <PlaybackAutoQueuer
+            :enabled="settings.autoQueueEnabled"
+            @update:enabled="settings.autoQueueEnabled = $event"
+            :target="settings.autoQueueTarget"
+            @update:target="settings.autoQueueTarget = $event"
+            :range="settings.autoQueueRange"
+            @update:range="settings.autoQueueRange = $event"
+            class="mb-2"
+          />
+          <PlaybackAutoClimb
+            :disabled="!settings.autoQueueEnabled"
+            :enabled="settings.autoClimbEnabled"
+            @update:enabled="settings.autoClimbEnabled = $event"
+            :min="settings.autoClimbMin"
+            @update:min="settings.autoClimbMin = $event"
+            :max="settings.autoClimbMax"
+            @update:max="settings.autoClimbMax = $event"
+            :step="settings.autoClimbStep"
+            @update:step="settings.autoClimbStep = $event"
+            class="mb-2"
           />
         </b-overlay>
 
@@ -128,6 +142,7 @@ import { computed, defineComponent, reactive, ref, toRef, watch } from '@vue/com
 
 import PlaybackLimiter from '@/components/PlaybackLimiter.vue'
 import PlaybackAutoQueuer from '@/components/PlaybackAutoQueuer.vue'
+import PlaybackAutoClimb from '@/components/PlaybackAutoClimb.vue'
 import PlaybackAutoFade from '@/components/PlaybackAutoFade.vue'
 import PlaylistBadge from '@/components/PlaylistBadge.vue'
 import HelpContent from '@/components/HelpContent.vue'
@@ -147,6 +162,10 @@ type Settings = {
   autoQueueEnabled: boolean
   autoQueueTarget: number
   autoQueueRange: number
+  autoClimbEnabled: boolean
+  autoClimbMin: number
+  autoClimbMax: number
+  autoClimbStep: number
   autoFadeEnabled: boolean
 }
 
@@ -169,6 +188,7 @@ export default defineComponent({
   components: {
     PlaybackLimiter,
     PlaybackAutoQueuer,
+    PlaybackAutoClimb,
     PlaybackAutoFade,
     PlaylistBadge,
     HelpContent,
@@ -191,12 +211,16 @@ export default defineComponent({
     })
 
     const { settings }: { settings: Settings } = usePersistedSettings({
+      autoFadeEnabled: true,
       timeLimitEnabled: false,
       timeLimitSeconds: 100,
       autoQueueEnabled: false,
       autoQueueTarget: 140,
       autoQueueRange: 6,
-      autoFadeEnabled: false,
+      autoClimbEnabled: false,
+      autoClimbMin: 120,
+      autoClimbMax: 180,
+      autoClimbStep: 5,
     })
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -318,7 +342,7 @@ export default defineComponent({
 
           if (matching.length > 0) {
             queue.track = getRandomUnplayed(matching)
-            console.log('[Queue] Added track for queuing', queue.track?.title, queue.track?.bpm)
+            console.log('[Queue] Computed track for queuing', queue.track?.title, queue.track?.bpm)
           } else {
             console.warn('[Queue] No track to queue given', target, '⌥', range)
           }
@@ -337,13 +361,24 @@ export default defineComponent({
       if (!s) return
 
       if (settings.timeLimitEnabled && passed(s, settings.timeLimitSeconds)) {
-        await client.skipToNext()
+        console.log('[Skip] Skipping to next song')
+        await client.skipToNext(devOpts())
+        setTimeout(() => {
+          if (settings.autoQueueEnabled && settings.autoClimbEnabled) {
+            const newTarget = settings.autoQueueTarget + settings.autoClimbStep
+            if (newTarget > settings.autoClimbMax) {
+              settings.autoQueueTarget = settings.autoClimbMin
+            } else {
+              settings.autoQueueTarget = newTarget
+            }
+          }
+        }, 2000)
       }
 
       if (settings.autoQueueEnabled && passed(s, secondsMax.value - 10)) {
         if (queue.track && !queue.sent) {
           console.log('[Queue] Add track to queue:', queue.track.title, queue.track.bpm)
-          await client.queue(`spotify:track:${queue.track.id}`)
+          await client.queue(`spotify:track:${queue.track.id}`, devOpts())
           queue.sent = true
         }
       }
