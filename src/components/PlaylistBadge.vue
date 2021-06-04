@@ -65,6 +65,8 @@ export default defineComponent({
       border-top-left-radius: 6px;
       border-bottom-left-radius: 6px;
     }
+    max-height: 64px;
+    max-width: 64px;
   }
 
   .text {
