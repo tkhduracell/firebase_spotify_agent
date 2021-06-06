@@ -3,9 +3,15 @@
     <b-row v-if="state && state.item" class="state" align-v="stretch">
       <b-col cols-sm="12" cols-md="12" cols-lg="7" align-self="center">
         <div v-if="current" :class="['bpm', isCurrentWithinRange ? '' : 'warntempo']">{{ current.bpm.toFixed() }} BPM</div>
-
         <div class="header">
-          <h1 v-if="current">{{ trackFormat(current) }}</h1>
+          <div class="clearfix">
+            <h1 v-if="current">
+              {{ trackFormat(current) }}
+              <div v-b-modal.trackedit class="d-inline-block" v-if="canEdit">
+                <b-icon-pencil-fill scale="0.5" />
+              </div>
+            </h1>
+          </div>
 
           <b-row align-v="center" align-h="center">
             <b-col cols="auto" class="d-block d-lg-none">
@@ -132,6 +138,7 @@
     </b-row>
 
     <div class="clock">{{ hhmm }}</div>
+    <EditModal v-if="current" :track="current" @update:track="updateTrackInfo" />
   </b-container>
 </template>
 
@@ -147,6 +154,7 @@ import PlaybackAutoFade from '@/components/PlaybackAutoFade.vue'
 import PlaylistBadge from '@/components/PlaylistBadge.vue'
 import HelpContent from '@/components/HelpContent.vue'
 import NextUp from '@/components/NextUp.vue'
+import EditModal from '@/components/EditModal.vue'
 
 import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
@@ -155,6 +163,7 @@ import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
 import { useVolume } from '@/volume'
 import { QueueState } from '@/types'
+import { useUser } from '@/firebase'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -193,6 +202,7 @@ export default defineComponent({
     PlaylistBadge,
     HelpContent,
     NextUp,
+    EditModal,
   },
   setup(props, { root: { $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
@@ -233,7 +243,7 @@ export default defineComponent({
     const tracks = new TrackDatabase(client)
 
     function trackFormat(track: TrackWithBPM, showBPM = false): string {
-      const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
+      const prefix = showBPM && track.bpm ? track.bpm.toFixed() + ' bpm - ' : ''
       return `${prefix}${track.artist} - ${track.title}`
     }
 
@@ -243,6 +253,7 @@ export default defineComponent({
 
     async function init() {
       await update()
+      setTimeout(() => tracks.update(), 4000)
     }
 
     async function update() {
@@ -270,7 +281,7 @@ export default defineComponent({
       const end = secondsMax.value
       const current = seconds.value
       const left = Math.max(end - current, 0).toFixed(0)
-      const pct = ((current / end) * 100).toFixed(0)
+      const pct = Math.min(100, (current / end) * 100).toFixed(0)
       return current / end < 0.1 ? '' : `${pct}% (${left} sec left)`
     })
 
@@ -444,6 +455,16 @@ export default defineComponent({
       }
     }
 
+    async function updateTrackInfo({ id, bpm }: TrackWithBPM) {
+      await tracks.updateTrackInfo(id, { bpm } as TrackWithBPM)
+      const item = state.value?.item
+      if (item) {
+        current.value = await tracks.getTrackWithTempo(toSimple(item))
+      }
+    }
+
+    const user = useUser()
+
     return {
       name,
       ...clock,
@@ -468,6 +489,8 @@ export default defineComponent({
       fading,
       isCurrentWithinRange,
       updateVolume,
+      updateTrackInfo,
+      canEdit: computed(() => !!user.id),
     }
   },
 })

@@ -54,6 +54,8 @@ export default defineComponent({
     const { client } = useSpotifyRedirect($route, onReady)
 
     function trackFormat(track: TrackWithBPM, showBPM = false): string {
+      // eslint-disable-next-line no-debugger
+      if (typeof track.bpm !== 'number') debugger
       const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
       return `${prefix}${track.artist} - ${track.title}`
     }

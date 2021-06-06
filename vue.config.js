@@ -7,7 +7,6 @@ const commitHash = require('child_process')
 
 module.exports = {
   devServer: {
-    compress: true,
     headers: {},
   },
 

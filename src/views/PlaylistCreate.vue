@@ -117,7 +117,7 @@ export default defineComponent({
       }
     }
 
-    const playlistInfo = createLocalDB('playlists-meta')
+    const playlistInfo = createLocalDB<SpotifyApi.SinglePlaylistResponse>('playlists-meta')
 
     const playlists = asyncComputed(async () => {
       const urls = form.value.urls.map(f => id(f.value))

@@ -29,13 +29,32 @@
     <router-view class="mt-4" />
     <footer>
       Version <span class="text-monospace" v-text="env.BUILD_GIT_COMMIT_HASH" /> - <span class="text-monospace" v-text="env.BUILD_TIME" />
+      <b-link v-b-modal.signin v-if="!user.id" class="ml-1">Sign In</b-link>
     </footer>
+    <b-modal id="signin" title="Sign In" @ok="doSignIn">
+      <b-row class="my-1">
+        <b-col sm="2">
+          <label for="input-email">Email:</label>
+        </b-col>
+        <b-col sm="10">
+          <b-form-input v-model="form.user" id="input-email" size="sm" placeholder="Enter your email"></b-form-input>
+        </b-col>
+      </b-row>
+      <b-row class="my-1">
+        <b-col sm="2">
+          <label for="input-password">Password:</label>
+        </b-col>
+        <b-col sm="10">
+          <b-form-input v-model="form.pass" id="input-password" size="sm" placeholder="Enter your password"></b-form-input>
+        </b-col>
+      </b-row>
+    </b-modal>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from '@vue/composition-api'
-
+import { defineComponent, reactive } from '@vue/composition-api'
+import { signIn, useUser } from '@/firebase'
 export default defineComponent({
   name: 'App',
   metaInfo: {
@@ -44,8 +63,16 @@ export default defineComponent({
   },
   setup() {
     const { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME } = process.env
+    const form = reactive({ user: '', pass: '' })
+    const user = useUser()
+
     return {
       env: { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME },
+      form,
+      user,
+      doSignIn() {
+        signIn(form.user, form.pass)
+      },
     }
   },
 })
