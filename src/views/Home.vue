@@ -88,7 +88,7 @@
           </b-col>
           <b-col cols="6">
             <b class="d-block">Last {{ historyItems.length }} played items</b>
-            <div v-for="l in historyItems" :key="'h-' + l.id" v-text="trackFormat(l, true)" />
+            <div v-for="(l, idx) in historyItems" :key="'h-' + l.id + '-' + idx" v-text="trackFormat(l, true)" />
             <div v-if="historyItems.length === 0">
               None so far...
             </div>
@@ -110,9 +110,9 @@
       <h1>Not playing</h1>
       <p>Play something with you spotify client.</p>
       <b>Try this:</b>
-      <b-button variant="outline-primary" @click="play('spotify:playlist:7te7WrFpNb1rjk0WRarnNR')">
+      <b-button variant="outline-primary" @click="play('spotify:playlist:27v5fDNRFr9lf2GUBxr5c8')">
         <b-icon-play />
-        Freesprut Buggisar
+        Bugg MASTER
       </b-button>
     </b-row>
     <b-row v-else-if="error && error.status === 401">
@@ -313,7 +313,14 @@ export default defineComponent({
     const isCurrentWithinRange = computed(() => {
       const min = settings.autoQueueTarget
       const max = settings.autoQueueTarget + settings.autoQueueRange
-      return settings.autoQueueEnabled ? isWithin(current.value?.bpm ?? 0, min, max) : true
+      if (settings.autoClimbEnabled) {
+        // If climb is enabled we have already steped up group up
+        return settings.autoClimbMin == min
+          ? isWithin(current.value?.bpm ?? 0, settings.autoClimbMax, settings.autoClimbMax + settings.autoQueueRange)
+          : isWithin(current.value?.bpm ?? 0, min - settings.autoClimbStep, max - settings.autoClimbStep)
+      } else {
+        return settings.autoQueueEnabled ? isWithin(current.value?.bpm ?? 0, min, max) : true
+      }
     })
 
     function getRandomUnplayed(items: TrackWithBPM[]): TrackWithBPM | undefined {
@@ -364,6 +371,7 @@ export default defineComponent({
         console.log('[Skip] Skipping to next song')
         await client.skipToNext(devOpts())
         setTimeout(() => {
+          // Execute auto-step
           if (settings.autoQueueEnabled && settings.autoClimbEnabled) {
             const newTarget = settings.autoQueueTarget + settings.autoClimbStep
             if (newTarget > settings.autoClimbMax) {

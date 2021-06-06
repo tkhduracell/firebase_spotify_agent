@@ -38,7 +38,7 @@
               variant="primary"
               @click="
                 $emit('play', {
-                  id: 'spotify:playlist:7te7WrFpNb1rjk0WRarnNR',
+                  id: 'spotify:playlist:27v5fDNRFr9lf2GUBxr5c8',
                   device,
                 })
               "

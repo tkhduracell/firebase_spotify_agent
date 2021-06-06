@@ -1,27 +1,24 @@
 import Spotify from 'spotify-web-api-js'
 import { toSimple, TrackSimple } from './tracks'
+import { createLocalDB, LocalDB } from '@/local-db'
 
 export class PlaylistDatabase {
   client: Spotify.SpotifyWebApiJs
+  db: LocalDB<TrackSimple[]>
 
   constructor(client: Spotify.SpotifyWebApiJs) {
     this.client = client
+    this.db = createLocalDB('pl-trx')
   }
 
   async getPlaylist(id: string): Promise<TrackSimple[]> {
-    const pl = window.localStorage.getItem(id)
-    if (pl) {
-      return JSON.parse(pl)
-    } else {
-      const fetched = await this.fetchPlaylist(id)
-      localStorage.setItem(id, JSON.stringify(fetched))
-      return fetched
-    }
+    return this.db.getOrCompute(id, () => this.fetchPlaylist(id))
   }
 
   private async fetchPlaylist(id: string): Promise<TrackSimple[]> {
     const { items, next } = await this.client.getPlaylistTracks(id, {
-      fields: 'limit,next,offset,previous,total,items(track(id,name,artists(name)))',
+      fields: 'limit,next,offset,previous,total,items(is_local,track(id,name,artists(name)))',
+      market: 'SE',
     })
 
     let all = items.map(i => toSimple(i.track))
@@ -29,7 +26,7 @@ export class PlaylistDatabase {
     let cursor = next
     while (cursor && i++ < 100) {
       const { items, next } = (await this.client.getGeneric(cursor)) as SpotifyApi.PlaylistTrackResponse
-      const plucked = items.map(i => toSimple(i.track))
+      const plucked = items.filter(i => !i.is_local).map(i => toSimple(i.track))
       all = [...all, ...plucked]
       cursor = next
     }

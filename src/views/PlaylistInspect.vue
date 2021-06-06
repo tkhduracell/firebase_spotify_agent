@@ -47,7 +47,7 @@ import { sortBy, groupBy, range, max, min } from 'lodash'
 import Chart from '@/components/Chart.vue'
 
 export default defineComponent({
-  name: 'Recommendation',
+  name: 'PlaylistInspect',
   components: { Chart },
   setup(props, { root: { $route } }) {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define

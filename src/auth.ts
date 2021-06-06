@@ -13,7 +13,7 @@ export function useSpotifyRedirect(
 
   const location = document.location
   const url = new URL('https://accounts.spotify.com/authorize')
-  url.searchParams.append('client_id', '2c23b47cf7274b24b1a34382a32ac94b')
+  url.searchParams.append('client_id', '0b2b46c7f3a04217bc9e3ee9f7053d7a')
   url.searchParams.append('response_type', 'token')
   url.searchParams.append(
     'redirect_uri',
