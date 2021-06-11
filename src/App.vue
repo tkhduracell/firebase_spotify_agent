@@ -28,7 +28,13 @@
     </b-navbar>
     <router-view class="mt-4" />
     <footer>
-      Version <span class="text-monospace" v-text="env.BUILD_GIT_COMMIT_HASH" /> - <span class="text-monospace" v-text="env.BUILD_TIME" />
+      Version
+      <a
+        class="text-monospace"
+        v-text="env.BUILD_GIT_COMMIT_HASH"
+        href="https://github.com/tkhduracell/firebase_spotify_agent/commits/main"
+      />
+      - <span class="text-monospace" v-text="env.BUILD_TIME" />
       <b-link v-b-modal.signin v-if="!user.id" class="ml-1">Sign In</b-link>
     </footer>
     <b-modal id="signin" title="Sign In" @ok="doSignIn">
