@@ -134,7 +134,7 @@ export default defineComponent({
           .map(async id => {
             const [info, tracks] = await Promise.all([
               playlistInfo.getOrCompute(id, () => client.getPlaylist(id, { fields: 'name,description,uri,owner.id,public,type' })),
-              playlistsDB.getPlaylist(id).then(tracksDB.getTracksWithTempo.bind(tracksDB)),
+              playlistsDB.getPlaylistTracks(id).then(tracksDB.getTracksWithTempo.bind(tracksDB)),
             ])
             return { id, info, tracks: sortBy(tracks, t => t.bpm) }
           })

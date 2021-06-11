@@ -74,7 +74,7 @@ export default defineComponent({
     )
     const playlistData = asyncComputed(() => (playlistId.value ? client.getPlaylist(playlistId.value) : undefined), undefined)
     const playlistTracksUnordered = asyncComputed(
-      () => (playlistId.value ? playlists.getPlaylist(playlistId.value).then(tracks.getTracksWithTempo.bind(tracks)) : []),
+      () => (playlistId.value ? playlists.getPlaylistTracks(playlistId.value).then(tracks.getTracksWithTempo.bind(tracks)) : []),
       []
     )
     const playlistTracks = computed(() => {

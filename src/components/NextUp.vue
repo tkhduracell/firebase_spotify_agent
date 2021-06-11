@@ -1,5 +1,12 @@
 <template>
-  <b-overlay :show="queue.loading" variant="dark">
+  <b-overlay :show="!!queue.loading" variant="dark">
+    <template #overlay>
+      <div class="d-flex align-items-center">
+        <div><b-spinner variant="primary" /></div>
+        <span class="ml-3" v-if="typeof queue.loading === 'string'" v-text="queue.loading" />
+      </div>
+    </template>
+
     <b class="d-block"> Next up {{ queue.sent ? ' - Queued!' : '' }}</b>
     <div class="artist" v-text="queue.track && queue.track.artist" />
     <div class="title" v-text="queue.track && queue.track.title" />
@@ -14,7 +21,7 @@ import { QueueState } from '@/types'
 
 export default defineComponent({
   props: {
-    queue: { type: Object as PropType<QueueState>, requied: true },
+    queue: { type: Object as PropType<QueueState>, required: true },
   },
 })
 </script>

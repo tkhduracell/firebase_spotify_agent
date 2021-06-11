@@ -2,7 +2,7 @@
   <b-container fluid="lg" class="home">
     <b-row v-if="state && state.item" class="state" align-v="stretch">
       <b-col cols-sm="12" cols-md="12" cols-lg="7" align-self="center">
-        <div v-if="current" :class="['bpm', isCurrentWithinRange ? '' : 'warntempo']">{{ current.bpm.toFixed() }} BPM</div>
+        <div v-if="current && current.bpm" :class="['bpm', isCurrentWithinRange ? '' : 'warntempo']">{{ current.bpm.toFixed() }} BPM</div>
         <div class="header">
           <div class="clearfix">
             <h1 v-if="current">
@@ -87,7 +87,7 @@
         <b-row class="mt-2">
           <b-col cols="6">
             <b-row>
-              <b-col class="nextup">
+              <b-col class="nextup" v-if="queue.loading || settings.autoQueueEnabled">
                 <NextUp :queue="queue" />
               </b-col>
             </b-row>
@@ -234,7 +234,7 @@ export default defineComponent({
     })
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client, reauth } = useSpotifyRedirect($route, init, update)
+    const { client, reauth } = useSpotifyRedirect($route, () => null, update)
     const clock = useClock()
     const devices = useDevices(client)
     const { startFadeDown, startFadeUp, fading } = useVolume(client)
@@ -249,11 +249,6 @@ export default defineComponent({
 
     function devOpts() {
       return state.value?.device?.id ? { device_id: state.value.device.id } : {}
-    }
-
-    async function init() {
-      await update()
-      setTimeout(() => tracks.update(), 4000)
     }
 
     async function update() {
@@ -302,7 +297,7 @@ export default defineComponent({
             await client.skipToNext(devOpts())
           }
           queue.sent = false
-          historyItems.value = [await tracks.getTrackWithTempo(toSimple(item)), ...historyItems.value].slice(0, 7)
+          historyItems.value = [await tracks.getTrackWithTempo(toSimple(item)), ...historyItems.value].slice(0, 20)
           current.value = await tracks.getTrackWithTempo(toSimple(item))
         }
       }
@@ -315,7 +310,18 @@ export default defineComponent({
           const [id] = uri.split(/:/).reverse()
           queue.loading = true
           context.value = await client.getPlaylist(id)
-          playlist.value = await tracks.getTracksWithTempo(await playlists.getPlaylist(id))
+
+          // eslint-disable-next-line no-inner-declarations
+          function playlistProgress(i: number, tot: number) {
+            queue.loading = `Loading playlist tracks ${i} / ${tot}`
+          }
+
+          // eslint-disable-next-line no-inner-declarations
+          function trackProgress(i: number, tot: number) {
+            queue.loading = `Loading track tempo ${i} / ${tot}`
+          }
+
+          playlist.value = await tracks.getTracksWithTempo(await playlists.getPlaylistTracks(id, playlistProgress), trackProgress)
           queue.loading = false
         }
       }

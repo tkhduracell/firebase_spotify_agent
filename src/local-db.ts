@@ -1,37 +1,61 @@
 export type LocalDB<T> = {
   get(key: string): T | null
   set(key: string, t: T): void
+  update(key: string, t: Partial<T>): T | undefined
   getOrCompute(key: string, fn: () => Promise<T>): Promise<T>
   has(key: string): boolean
 }
+const version = 'v0'
+
 export function createLocalDB<T>(namespace: string): LocalDB<T> {
+  const key = (k: string) => `${version}:${namespace}:${k}`
+
+  Object.keys(localStorage).forEach(k => {
+    if (!k.startsWith(version + ':')) {
+      console.warn(`[db] Deleting ${k} from storage`)
+      delete localStorage[k]
+    }
+  })
+
   return {
-    get(key: string): T | null {
-      const data = localStorage.getItem(namespace + ':' + key)
+    get(_key: string): T | null {
+      const data = localStorage.getItem(key(_key))
       if (data === null || data === undefined) {
         return null
       }
       try {
         return JSON.parse(data) as T
       } catch (e) {
-        delete localStorage[namespace + ':' + key]
+        delete localStorage[key(_key)]
       }
       return null
     },
-    set(key: string, t: T): void {
-      localStorage.setItem(namespace + ':' + key, JSON.stringify(t))
+    set(_key: string, t: T): void {
+      localStorage.setItem(key(_key), JSON.stringify(t))
     },
-    has(key: string): boolean {
-      const d = localStorage.getItem(namespace + ':' + key)
+    update(_key: string, delta: Partial<T>): T | undefined {
+      const data = localStorage.getItem(key(_key))
+      if (data !== null && data !== undefined) {
+        try {
+          const value = JSON.parse(data) as T
+          localStorage.setItem(key(_key), JSON.stringify({ ...value, ...delta }))
+          return { ...value, ...delta }
+        } catch (e) {
+          delete localStorage[key(_key)]
+        }
+      }
+    },
+    has(_key: string): boolean {
+      const d = localStorage.getItem(key(_key))
       return d !== null && d !== undefined
     },
-    async getOrCompute(key: string, fn: () => Promise<T>): Promise<T> {
-      const data = localStorage.getItem(namespace + ':' + key)
+    async getOrCompute(_key: string, fn: () => Promise<T>): Promise<T> {
+      const data = localStorage.getItem(key(_key))
       if (data) {
         return Promise.resolve(JSON.parse(data) as T)
       } else {
         const value = await fn()
-        localStorage.setItem(namespace + ':' + key, JSON.stringify(value))
+        localStorage.setItem(key(_key), JSON.stringify(value))
         return value
       }
     },

@@ -1,11 +1,17 @@
 import Spotify from 'spotify-web-api-js'
-import { chunk, flatten } from 'lodash'
+import { chunk } from 'lodash'
 import { createLocalDB, LocalDB } from '@/local-db'
 import { collection, FirebaseFirestore, getDoc, getFirestore, setDoc } from '@firebase/firestore'
 import { doc, getDocs } from 'firebase/firestore'
+import { ProgressFn } from './types'
+import { Timer } from './timer'
 
 export type TrackSimple = { title: string; artist: string; id: string }
 export type TrackWithBPM = TrackSimple & { bpm: number }
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 export function toSimple(track: SpotifyApi.PlaylistTrackObject['track'] | SpotifyApi.PlayHistoryObject['track']): TrackSimple {
   const type = track.type ?? 'track'
@@ -65,30 +71,55 @@ export class TrackDatabase {
     })
   }
 
-  async getTracksWithTempo(tracks: TrackSimple[]): Promise<TrackWithBPM[]> {
-    const missing = tracks.filter(t => !this.db.has(t.id))
-    const present = tracks.filter(t => this.db.has(t.id))
+  async getTracksWithTempo(tracks: string[], progress?: ProgressFn): Promise<TrackWithBPM[]> {
+    const store: Record<string, TrackWithBPM> = {}
 
-    const missingChunked = await Promise.all(
-      chunk(missing, 100).map(async part => {
-        const ids = part.map(s => s.id)
-        const result = await this.client.getAudioFeaturesForTracks(ids)
-
-        const out: TrackWithBPM[] = []
-        for (const ft of result.audio_features.filter(ft => ft && ft.id)) {
-          const simple = part.find(t => t.id === ft.id)
-          if (simple && ft.tempo > 0) {
-            this.db.set(ft.id, { ...simple, bpm: ft.tempo })
-            out.push({ ...simple, bpm: ft.tempo })
-          }
+    let i = 0
+    const missing = new Set<string>()
+    for (const id of tracks) {
+      const track = this.db.get(id)
+      if (track) {
+        store[id] = track
+        if (!track.bpm) {
+          missing.add(id)
         }
-        return out
-      })
-    )
-    const fetched = flatten(missingChunked)
-    const loaded = await Promise.all(present.map(async t => await this.getTrackWithTempo(t)))
+      } else {
+        console.warn(`[tracks] Track ${id} is missing in database`)
+      }
+    }
 
-    return [...loaded, ...fetched]
+    const timer = new Timer('[tracks] ')
+
+    if (progress) {
+      progress(i, tracks.length)
+    }
+
+    for (const ids of chunk(Array.from(missing), 100)) {
+      const result = await this.client.getAudioFeaturesForTracks(ids)
+
+      for (const { id, tempo: bpm } of result.audio_features.filter(ft => ft && ft.id && ft.tempo > 0)) {
+        this.db.update(id, { bpm })
+        store[id] = { ...store[id], bpm }
+      }
+
+      i += ids.length
+      if (progress) {
+        progress(i, tracks.length)
+      }
+
+      await sleep(100)
+    }
+
+    timer.log(`${i} BPM lookups`)
+
+    const changes = await this.patchTracks()
+
+    for (const [id, track] of Object.entries(changes)) {
+      store[id] = track
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return tracks.filter(id => !!(id in store)).map(id => store[id])
   }
 
   async updateTrackInfo(id: string, data: TrackWithBPM) {
@@ -99,9 +130,11 @@ export class TrackDatabase {
     }
   }
 
-  async update() {
+  async patchTracks() {
+    const timer = new Timer('[tracks] ')
     const res = await getDocs(tracksCol(this.firestore))
     let count = 0
+    const out: Record<string, TrackWithBPM> = {}
     for (const doc of res.docs) {
       const data = doc.data() as Record<string, TrackWithBPM>
       const tracks = Object.keys(data)
@@ -110,10 +143,12 @@ export class TrackDatabase {
           const patch = data[id]
           const updated = { ...this.db.get(id), ...patch }
           this.db.set(id, updated)
+          out[id] = updated
           count++
         }
       }
     }
-    console.log('[db] Update database with', count, 'tracks')
+    timer.log(`firestore patching of ${count} tracks`)
+    return out
   }
 }
