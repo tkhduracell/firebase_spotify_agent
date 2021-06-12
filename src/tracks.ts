@@ -5,13 +5,10 @@ import { collection, FirebaseFirestore, getDoc, getFirestore, setDoc } from '@fi
 import { doc, getDocs } from 'firebase/firestore'
 import { ProgressFn } from './types'
 import { Timer } from './timer'
+import { sleep } from './sleep'
 
 export type TrackSimple = { title: string; artist: string; id: string }
 export type TrackWithBPM = TrackSimple & { bpm: number }
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 export function toSimple(track: SpotifyApi.PlaylistTrackObject['track'] | SpotifyApi.PlayHistoryObject['track']): TrackSimple {
   const type = track.type ?? 'track'
@@ -55,37 +52,58 @@ export class TrackDatabase {
     this.firestore = getFirestore()
   }
 
-  getPlaylistTrackWithTempo({ track }: SpotifyApi.PlaylistTrackObject): Promise<TrackWithBPM> {
-    return this.getTrackWithTempo(toSimple(track))
+  private async getTempo(id: string): Promise<number> {
+    const override = await getDoc(trackDoc(this.firestore, id))
+    if (override.exists()) {
+      const data = override.data()
+      if (id in data) {
+        const { bpm } = data[id]
+        if (!bpm) {
+          console.warn('[tracks] Track', id, 'invalid BPM:', bpm)
+        }
+        return bpm
+      }
+    }
+    const { tempo: bpm } = await this.client.getAudioFeaturesForTrack(id)
+    if (!bpm) {
+      console.warn('[tracks] Track', id, 'invalid BPM:', bpm)
+    }
+    return bpm
   }
 
-  getTrackWithTempo(track: TrackSimple): Promise<TrackWithBPM> {
-    return this.db.getOrCompute(track.id, async () => {
-      const override = await getDoc(trackDoc(this.firestore, track.id))
-      if (override.exists()) {
-        const { bpm } = override.data()
-        return { ...track, bpm }
-      }
-      const { tempo: bpm } = await this.client.getAudioFeaturesForTrack(track.id)
-      return { ...track, bpm }
+  async getTrackWithTempo(id: string): Promise<TrackWithBPM> {
+    const track = await this.db.getOrCompute(id, async () => {
+      const track = await this.client.getTrack(id)
+      return { ...toSimple(track), bpm: await this.getTempo(id) }
     })
+
+    if (!track.bpm) {
+      const bpm = await this.getTempo(id)
+      this.db.update(id, { bpm })
+      return { ...track, bpm }
+    }
+    return track
   }
 
   async getTracksWithTempo(tracks: string[], progress?: ProgressFn): Promise<TrackWithBPM[]> {
     const store: Record<string, TrackWithBPM> = {}
 
     let i = 0
-    const missing = new Set<string>()
+    const missing: Record<string, true> = {}
     for (const id of tracks) {
-      const track = this.db.get(id)
-      if (track) {
-        store[id] = track
-        if (!track.bpm) {
-          missing.add(id)
+      const saved = this.db.get(id)
+      if (saved) {
+        store[id] = saved
+        if (saved.bpm === undefined || saved.bpm === null) {
+          missing[id] = true
         }
       } else {
         console.warn(`[tracks] Track ${id} is missing in database`)
       }
+    }
+
+    if (Object.keys(missing).length > 0) {
+      console.log(`[tracks] ${Object.keys(missing).length} is missing tempo`)
     }
 
     const timer = new Timer('[tracks] ')
@@ -94,7 +112,7 @@ export class TrackDatabase {
       progress(i, tracks.length)
     }
 
-    for (const ids of chunk(Array.from(missing), 100)) {
+    for (const ids of chunk(Object.keys(missing), 100)) {
       const result = await this.client.getAudioFeaturesForTracks(ids)
 
       for (const { id, tempo: bpm } of result.audio_features.filter(ft => ft && ft.id && ft.tempo > 0)) {
@@ -144,6 +162,7 @@ export class TrackDatabase {
           const updated = { ...this.db.get(id), ...patch }
           this.db.set(id, updated)
           out[id] = updated
+          console.debug(`[tracks] Patched ${id} with`, patch)
           count++
         }
       }

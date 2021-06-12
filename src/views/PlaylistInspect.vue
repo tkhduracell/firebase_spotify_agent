@@ -10,6 +10,9 @@
           <b-form-row>
             <b-col cols="6">
               <b-form-input type="text" v-model="playlist.url" />
+              <b-form-checkbox v-model="sorted">
+                Sort by tempo?
+              </b-form-checkbox>
             </b-col>
           </b-form-row>
         </b-form>
@@ -77,9 +80,11 @@ export default defineComponent({
       () => (playlistId.value ? playlists.getPlaylistTracks(playlistId.value).then(tracks.getTracksWithTempo.bind(tracks)) : []),
       []
     )
+    const sorted = ref(true)
     const playlistTracks = computed(() => {
-      return sortBy(playlistTracksUnordered.value, t => t.bpm)
+      return sorted.value ? sortBy(playlistTracksUnordered.value, t => t.bpm) : playlistTracksUnordered.value
     })
+
     const playlistTempoHistorgram = computed(() => {
       const groups = groupBy(
         playlistTracksUnordered.value.filter(t => t.bpm > 0),
@@ -198,6 +203,7 @@ export default defineComponent({
         },
       }),
       trackFormat,
+      sorted,
     }
   },
 })

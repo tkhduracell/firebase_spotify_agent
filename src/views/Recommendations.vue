@@ -54,7 +54,7 @@
 /* eslint-disable @typescript-eslint/camelcase */
 import { defineComponent, ref, watch } from '@vue/composition-api'
 
-import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
+import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { useSpotifyRedirect } from '@/auth'
 
 export default defineComponent({
@@ -122,7 +122,7 @@ export default defineComponent({
 
     const tracks = ref<TrackWithBPM[]>()
     watch(recs, async r => {
-      tracks.value = !r ? [] : await Promise.all(r.tracks.map(t => db.getTrackWithTempo(toSimple(t))))
+      tracks.value = !r ? [] : await Promise.all(r.tracks.map(t => db.getTrackWithTempo(t.id)))
     })
 
     async function play(track: TrackWithBPM) {

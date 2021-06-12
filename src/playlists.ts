@@ -3,10 +3,7 @@ import { toSimple, TrackSimple } from './tracks'
 import { createLocalDB, LocalDB } from '@/local-db'
 import { ProgressFn } from './types'
 import { Timer } from './timer'
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+import { sleep } from './sleep'
 
 export class PlaylistDatabase {
   client: Spotify.SpotifyWebApiJs

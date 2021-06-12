@@ -138,7 +138,7 @@
     </b-row>
 
     <div class="clock">{{ hhmm }}</div>
-    <EditModal v-if="current" :track="current" @update:track="updateTrackInfo" />
+    <EditModal v-if="current" :track="current" @update:track="updateTrackInfo" @skip:track="playNext" />
   </b-container>
 </template>
 
@@ -156,7 +156,7 @@ import HelpContent from '@/components/HelpContent.vue'
 import NextUp from '@/components/NextUp.vue'
 import EditModal from '@/components/EditModal.vue'
 
-import { TrackWithBPM, TrackDatabase, toSimple } from '@/tracks'
+import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
 import { useSpotifyRedirect } from '@/auth'
 import { useClock } from '@/clock'
@@ -297,8 +297,8 @@ export default defineComponent({
             await client.skipToNext(devOpts())
           }
           queue.sent = false
-          historyItems.value = [await tracks.getTrackWithTempo(toSimple(item)), ...historyItems.value].slice(0, 20)
-          current.value = await tracks.getTrackWithTempo(toSimple(item))
+          historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 20)
+          current.value = await tracks.getTrackWithTempo(item.id)
         }
       }
     )
@@ -463,10 +463,7 @@ export default defineComponent({
 
     async function updateTrackInfo({ id, bpm }: TrackWithBPM) {
       await tracks.updateTrackInfo(id, { bpm } as TrackWithBPM)
-      const item = state.value?.item
-      if (item) {
-        current.value = await tracks.getTrackWithTempo(toSimple(item))
-      }
+      current.value = await tracks.getTrackWithTempo(id)
     }
 
     const user = useUser()
