@@ -4,14 +4,16 @@ export type LocalDB<T> = {
   update(key: string, t: Partial<T>): T | undefined
   getOrCompute(key: string, fn: () => Promise<T>): Promise<T>
   has(key: string): boolean
+  clear(key: string): boolean
 }
-const version = 'v0'
+
+export const VERSION = 'v0'
 
 export function createLocalDB<T>(namespace: string): LocalDB<T> {
-  const key = (k: string) => `${version}:${namespace}:${k}`
+  const key = (k: string) => `${VERSION}:${namespace}:${k}`
 
   Object.keys(localStorage).forEach(k => {
-    if (!k.startsWith(version + ':')) {
+    if (!k.startsWith(VERSION + ':')) {
       console.warn(`[db] Deleting ${k} from storage`)
       delete localStorage[k]
     }
@@ -48,6 +50,14 @@ export function createLocalDB<T>(namespace: string): LocalDB<T> {
     has(_key: string): boolean {
       const d = localStorage.getItem(key(_key))
       return d !== null && d !== undefined
+    },
+    clear(_key: string): boolean {
+      const d = localStorage.getItem(key(_key))
+      if (d !== null && d !== undefined) {
+        delete localStorage[key(_key)]
+        return true
+      }
+      return false
     },
     async getOrCompute(_key: string, fn: () => Promise<T>): Promise<T> {
       const data = localStorage.getItem(key(_key))

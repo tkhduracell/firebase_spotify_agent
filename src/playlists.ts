@@ -17,6 +17,19 @@ export class PlaylistDatabase {
   }
 
   async getPlaylistTracks(id: string, progress?: ProgressFn): Promise<string[]> {
+    const { snapshot_id: current } = await this.client.getPlaylist(id, {
+      fields: 'snapshot_id',
+      market: 'SE',
+    })
+
+    const [previous] = await this.db.getOrCompute(id + ':version', async () => [current])
+
+    // Prune saved if changed snapshot
+    if (current !== previous) {
+      console.log('[platlist] Playlist', id, 'has changed, clearing saved...', previous, '->', current)
+      this.db.clear(id)
+    }
+
     return this.db.getOrCompute(id, () => this.fetchPlaylist(id, progress))
   }
 
@@ -24,10 +37,10 @@ export class PlaylistDatabase {
     const timer = new Timer('[playlist] ')
 
     const { items, next, total } = await this.client.getPlaylistTracks(id, {
-      fields: 'next,total,items(is_local,track(id,name,artists(name)))',
+      fields: 'next,total,items(is_local,track(id,name,artists(name),is_playable))',
       market: 'SE',
     })
-    let all = items.map(i => toSimple(i.track))
+    let all = items.filter(t => t !== null && !t.is_local && t.track.is_playable).map(i => toSimple(i.track))
 
     if (progress) {
       progress(all.length, total)
@@ -39,7 +52,7 @@ export class PlaylistDatabase {
       await sleep(100)
 
       const { items, next } = (await this.client.getGeneric(cursor)) as SpotifyApi.PlaylistTrackResponse
-      const plucked = items.filter(i => !i.is_local).map(i => toSimple(i.track))
+      const plucked = items.filter(i => i !== null && !i.is_local && i.track.is_playable).map(i => toSimple(i.track))
       all = [...all, ...plucked]
 
       if (progress) {

@@ -116,7 +116,7 @@
       <h1>Not playing</h1>
       <p>Play something with you spotify client.</p>
       <b>Try this:</b>
-      <b-button variant="outline-primary" @click="play('spotify:playlist:27v5fDNRFr9lf2GUBxr5c8')">
+      <b-button variant="outline-primary" @click="play('spotify:playlist:00968xdUCWZgRHZqepn8IQ')">
         <b-icon-play />
         Bugg MASTER
       </b-button>

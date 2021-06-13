@@ -33,7 +33,7 @@
           <p v-if="p.info" v-text="p.info.description" />
           <div v-if="p.tracks.length > 0">
             <div v-for="(t, idx) in p.tracks" :key="idx + t.id">
-              <b-link @click="play(t)" v-text="trackFormat(t, true)" />
+              <b-link @click="play(t)">{{ trackFormat(t, true) }} </b-link>
             </div>
           </div>
         </div>
@@ -46,7 +46,10 @@
         <p v-text="`${master.length} songs (${master.total - master.length} removed)`" />
         <div v-if="master.length > 0">
           <div v-for="t in master.tracks" :key="'master-' + t.id">
-            <b-link @click="play(t)" v-text="trackFormat(t, true)" />
+            <b-link @click="play(t)">
+              {{ trackFormat(t, true) }}
+              <b-icon-exclamation-triangle class="text-danger" v-if="master.duplicates[t.id]" />
+            </b-link>
           </div>
         </div>
       </b-col>
@@ -61,12 +64,12 @@ import { defineComponent, reactive, computed } from '@vue/composition-api'
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { useSpotifyRedirect } from '@/auth'
 import { PlaylistDatabase } from '@/playlists'
-import { createLocalDB } from '@/local-db'
+import { createLocalDB, VERSION } from '@/local-db'
 
 import { asyncComputed, useStorage } from '@vueuse/core'
 import Chart from '@/components/Chart.vue'
 
-import { uniq, sortBy, flatten, uniqBy, chunk } from 'lodash'
+import { uniq, sortBy, flatten, uniqBy, chunk, groupBy, filter, fromPairs } from 'lodash'
 
 function id(url: string): string {
   return url.replace(/https:\/\/open\.spotify\.com\/playlist\/(\w{20,24})(\?.+)?/i, '$1')
@@ -97,7 +100,7 @@ export default defineComponent({
     const tracksDB = new TrackDatabase(client)
     const playlistsDB = new PlaylistDatabase(client)
 
-    const form = useStorage('playlist-create-urls', {
+    const form = useStorage(VERSION + ':pl-urls', {
       urls: [{ value: '' }],
     })
 
@@ -117,7 +120,7 @@ export default defineComponent({
       }
     }
 
-    const playlistInfo = createLocalDB<SpotifyApi.SinglePlaylistResponse>('playlists-meta')
+    const playlistInfo = createLocalDB<SpotifyApi.SinglePlaylistResponse>('pl-meta')
 
     const playlists = asyncComputed(async () => {
       const urls = form.value.urls.map(f => id(f.value))
@@ -133,21 +136,33 @@ export default defineComponent({
           .filter(id => id.match(/^\w{20,24}$/i))
           .map(async id => {
             const [info, tracks] = await Promise.all([
-              playlistInfo.getOrCompute(id, () => client.getPlaylist(id, { fields: 'name,description,uri,owner.id,public,type' })),
+              playlistInfo.getOrCompute(id, () =>
+                client.getPlaylist(id, { fields: 'name,description,uri,owner.id,public,type', market: 'SE' })
+              ),
               playlistsDB.getPlaylistTracks(id).then(tracksDB.getTracksWithTempo.bind(tracksDB)),
             ])
-            return { id, info, tracks: sortBy(tracks, t => t.bpm) }
+            return { id, info, tracks: sortBy(tracks, ['bpm', 'artist']) }
           })
       )
     }, [])
 
     const master = computed(() => {
       const flat = flatten(playlists.value.map(p => p.tracks))
-      const tracks = uniqBy(
-        sortBy(flat, t => t.bpm),
-        t => t.id
+      const tracks = sortBy(
+        uniqBy(sortBy(flat, ['bpm', 'artist']), t => t.id),
+        ['bpm', 'artist']
       )
-      return { tracks, length: tracks.length, total: flat.length }
+
+      const duplicates = fromPairs(
+        flatten(
+          filter(
+            groupBy(tracks, t => t.title.toLowerCase() + t.artist.toLowerCase()),
+            group => group.length >= 2
+          )
+        ).map(t => [t.id, true])
+      )
+
+      return { tracks, length: tracks.length, total: flat.length, duplicates }
     })
 
     function description(url: string): string {

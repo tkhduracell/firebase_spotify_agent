@@ -18,11 +18,16 @@
         </b-form>
       </b-col>
     </b-row>
-    <b-row v-if="playlist.data" class="mt-3">
-      <b-col cols="6">
-        <h2 v-text="playlist.data.name" />
+    <b-row class="mt-3">
+      <b-col cols="6" v-if="loading.info">
+        <b-spinner />
+      </b-col>
+      <b-col cols="6" v-else>
+        <h2 v-text="playlist.info.name" />
         <p v-if="playlist.tracks.length > 0" v-text="`${playlist.tracks.length} songs`" />
-        <p v-if="playlist.data.description" v-text="playlist.data.description" />
+        <p v-if="playlist.info.description" v-text="playlist.info.description" />
+
+        <b-spinner v-if="loading.tracks" />
         <div v-if="playlist.tracks.length > 0">
           <div v-for="(t, idx) in playlist.tracks" :key="idx + t.id">
             <b-link @click="play(t)" v-text="trackFormat(t, true)" />
@@ -75,11 +80,17 @@ export default defineComponent({
             .find(() => true) ?? ''
         : ''
     )
-    const playlistData = asyncComputed(() => (playlistId.value ? client.getPlaylist(playlistId.value) : undefined), undefined)
+
+    const loadingInfo = ref(false)
+    const playlistInfo = asyncComputed(() => (playlistId.value ? client.getPlaylist(playlistId.value) : undefined), undefined, loadingInfo)
+
+    const loadingTracks = ref(false)
     const playlistTracksUnordered = asyncComputed(
       () => (playlistId.value ? playlists.getPlaylistTracks(playlistId.value).then(tracks.getTracksWithTempo.bind(tracks)) : []),
-      []
+      [],
+      loadingTracks
     )
+
     const sorted = ref(true)
     const playlistTracks = computed(() => {
       return sorted.value ? sortBy(playlistTracksUnordered.value, t => t.bpm) : playlistTracksUnordered.value
@@ -167,11 +178,15 @@ export default defineComponent({
     return {
       tracks,
       play,
+      loading: reactive({
+        info: loadingInfo,
+        tracks: loadingTracks,
+      }),
       playlist: reactive({
         url: playlistUrl,
         id: playlistId,
         tracks: playlistTracks,
-        data: playlistData,
+        info: playlistInfo,
         chart: playlistTempoChart,
         chartoptions: {
           legend: { display: false },
