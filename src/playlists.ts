@@ -22,12 +22,13 @@ export class PlaylistDatabase {
       market: 'SE',
     })
 
-    const [previous] = await this.db.getOrCompute(id + ':version', async () => [current])
+    const [previous] = await this.db.getOrCompute(`${id}:version`, async () => [current])
 
     // Prune saved if changed snapshot
     if (current !== previous) {
       console.log('[platlist] Playlist', id, 'has changed, clearing saved...', previous, '->', current)
       this.db.clear(id)
+      this.db.clear(`${id}:version`)
     }
 
     return this.db.getOrCompute(id, () => this.fetchPlaylist(id, progress))
