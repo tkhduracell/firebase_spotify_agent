@@ -4,8 +4,8 @@
       <b-col>
         <h1>Playlist Creator</h1>
         <p>
-          Add playlists here to join then into a single one called <span class="text-monospace">BUGG MASTER</span>. Removing duplicates and
-          sorting them by tempo. Press the create below to create it.
+          Add playlists here to join then into a single one. Removing duplicates and sorting them by tempo. Press the create below to create
+          it.
         </p>
         <b-form>
           <b-form-row>
@@ -40,8 +40,8 @@
       </b-col>
       <b-col cols="6">
         <h2>
-          BUGG MASTER
-          <b-button size="sm" variant="primary" class="mb-1" @click="create('BUGG MASTER')">Create</b-button>
+          Generated playlist
+          <b-button size="sm" variant="primary" class="mb-1" @click="create('Generated playlist')">Create</b-button>
         </h2>
         <p v-text="`${master.length} songs (${master.total - master.length} removed)`" />
         <div v-if="master.length > 0">
