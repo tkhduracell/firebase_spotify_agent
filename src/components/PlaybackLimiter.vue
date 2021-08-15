@@ -5,10 +5,10 @@
         <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Skip to next after</b-col>
-      <b-col v-for="(sec, idx) in fixed" :key="'set-' + sec" cols="auto">
+      <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
         <b-button
           :disabled="!enabled || progress + 10 > sec"
-          :class="['fixed', 'mr-1', idx > 3 ? 'd-none d-xl-block' : '']"
+          :class="['fixed', 'mr-1', [30, 150].includes(sec) ? 'hide-large' : '']"
           size="lg"
           variant="primary"
           @click="$emit('update:value', sec)"
@@ -19,10 +19,9 @@
         <b-form-spinbutton
           :disabled="!enabled"
           size="lg"
-          :step="10"
+          :step="5"
           :min="Math.max(10.0 * Math.ceil(progress / 10.0) + 10, 30)"
           :max="86400"
-          class="custom"
           :value="value"
           @change="$emit('update:value', Math.max(10.0 * Math.ceil(progress / 10.0) + 10, parseInt($event)))"
         />
@@ -65,7 +64,10 @@ export default defineComponent({
   .label.last {
     width: 2em;
   }
-  .check-button {
+  @media (max-width: 1400px) {
+    .hide-large {
+      display: none;
+    }
   }
 }
 </style>
