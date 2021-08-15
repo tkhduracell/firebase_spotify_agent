@@ -2,7 +2,7 @@
   <div id="app">
     <b-navbar toggleable="lg" type="dark" variant="info" id="nav">
       <b-navbar-brand to="/">
-        <img src="favicon.svg" class="d-inline-block align-top mr-2" alt="SA logo" height="30em" width="30em" />
+        <img src="favicon2.svg" class="d-inline-block align-top mr-2" alt="SA logo" height="30em" width="30em" />
         Spotify Agent
       </b-navbar-brand>
 
@@ -21,7 +21,7 @@
 
         <!-- Right aligned nav items -->
         <b-navbar-nav class="ml-auto">
-          <b-nav-item href="/status">My Profile</b-nav-item>
+          <b-nav-item href="/status">{{ spotifyUser.name }}</b-nav-item>
           <b-nav-item href="/logout">Logout</b-nav-item>
         </b-navbar-nav>
       </b-collapse>
@@ -61,6 +61,7 @@
 <script lang="ts">
 import { defineComponent, reactive } from '@vue/composition-api'
 import { signIn, useUser } from '@/firebase'
+import { useSpotifyUser } from './auth'
 export default defineComponent({
   name: 'App',
   metaInfo: {
@@ -70,12 +71,14 @@ export default defineComponent({
   setup() {
     const { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME } = process.env
     const form = reactive({ user: '', pass: '' })
+    const spotifyUser = useSpotifyUser()
     const user = useUser()
 
     return {
       env: { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME },
       form,
       user,
+      spotifyUser,
       doSignIn() {
         signIn(form.user, form.pass)
       },
