@@ -1,21 +1,29 @@
 <template>
   <div>
-    <h1>Welcome to Spotify Agent!</h1>
-    <p>
-      This is a music tool written to ease Spotify playback during dance traning.
-    </p>
+    <b-row>
+      <b-col cols="3">
+        <b-img fluid src="favicon2.svg" />
+      </b-col>
+      <b-col cols="9">
+        <h1>Welcome to Spotify Agent!</h1>
+        <p>
+          This is a music tool written to ease Spotify playback during dance traning.
+        </p>
+      </b-col>
+    </b-row>
+
     <h2>How do I use it?</h2>
     <p>Let's go through each step.</p>
-    <h4>1. Open this page (you're done already, great!)</h4>
+    <h4>1. Open this page</h4>
     <p>Open this page in any modern browser.</p>
+    <p>Great, you're already done!</p>
     <h4>2. Open Spotify</h4>
     <p>
       Open Spotify on your computer or use your mobile.
     </p>
-    <h4>3. Play a playlist</h4>
+    <h4>3. Select device</h4>
     <p>
-      Find a playlist with <b>MANY</b> tracks that can be the source for you playback. If you don't have anyone, you can choose to start the
-      one below.
+      Select your device in the list and press play on the wished music style.
     </p>
     <p>
       <b>Start playing on a device</b>
@@ -35,20 +43,25 @@
           </b-td>
           <b-td>
             <b-button
+              v-for="pl in playlists"
+              :key="pl.key + device.id"
               variant="primary"
+              class="mr-2"
               @click="
                 $emit('play', {
-                  id: 'spotify:playlist:00968xdUCWZgRHZqepn8IQ',
+                  id: pl.id,
                   device,
                 })
               "
             >
+              {{ pl.text }}
               <b-icon-play-fill scale="1.2" />
             </b-button>
           </b-td>
         </b-tr>
       </b-table-simple>
     </div>
+    <p>If you have any other playlist you'd like to use. Just start that playlist from the Spotify app.</p>
     <h4>Current features</h4>
     <ul>
       <li>Switch track after a fixed number of seconds.</li>
@@ -75,7 +88,13 @@ export default defineComponent({
     onMounted(start)
     onUnmounted(remove)
 
-    return {}
+    const playlists = [
+      { key: 'bugg', id: 'spotify:playlist:00968xdUCWZgRHZqepn8IQ', text: 'Bugg' },
+      { key: 'lindy', id: 'spotify:playlist:031EwXmrqlByHXO3QTd3ji', text: 'Lindy' },
+      { key: 'boggie', id: 'spotify:playlist:5VrKW92gaXcmsYWsY7DyJm', text: 'Boogie' },
+    ]
+
+    return { playlists }
   },
 })
 </script>

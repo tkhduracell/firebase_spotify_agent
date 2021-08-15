@@ -145,7 +145,7 @@
 <script lang="ts">
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable @typescript-eslint/camelcase */
-import { computed, defineComponent, reactive, ref, toRef, watch } from '@vue/composition-api'
+import { computed, defineComponent, onMounted, onUnmounted, reactive, ref, toRef, watch } from '@vue/composition-api'
 
 import PlaybackLimiter from '@/components/PlaybackLimiter.vue'
 import PlaybackAutoQueuer from '@/components/PlaybackAutoQueuer.vue'
@@ -158,12 +158,13 @@ import EditModal from '@/components/EditModal.vue'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
-import { useSpotifyRedirect } from '@/auth'
+import { useSpotifyRedirect, useSpotifyUser } from '@/auth'
 import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
 import { useVolume } from '@/volume'
 import { QueueState } from '@/types'
 import { useUser } from '@/firebase'
+import { useHotKeys } from '@/hotkeys'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -204,7 +205,7 @@ export default defineComponent({
     NextUp,
     EditModal,
   },
-  setup(props, { root: { $route } }) {
+  setup(props, { root: { $root, $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
     const playback = ref<SpotifyApi.CurrentPlaybackResponse>()
     const historyItems = ref<TrackWithBPM[]>([])
@@ -408,7 +409,7 @@ export default defineComponent({
         }
       }
 
-      if (settings.autoFadeEnabled && passed(s, secondsMax.value - 5)) {
+      if (settings.autoFadeEnabled && passed(s, secondsMax.value - 3)) {
         startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
       }
 
@@ -417,7 +418,7 @@ export default defineComponent({
       }
     })
 
-    async function play(context_uri: string, device?: SpotifyApi.UserDevice) {
+    async function play(context_uri?: string, device?: SpotifyApi.UserDevice) {
       if (context_uri && typeof context_uri === 'string') {
         const dev = device && device.id ? { device_id: device.id } : {}
         await client.play({ context_uri, ...dev })
@@ -452,12 +453,12 @@ export default defineComponent({
     }
 
     async function playPrev() {
-      await client.skipToPrevious()
+      await client.skipToPrevious(devOpts())
     }
 
     async function updateVolume(vol: number) {
       if (vol !== null && vol !== undefined) {
-        await client.setVolume(vol, devOpts())
+        await client.setVolume(Math.max(0, Math.min(100, vol)), devOpts())
       }
     }
 
@@ -467,6 +468,18 @@ export default defineComponent({
     }
 
     const user = useUser()
+
+    useSpotifyUser(client)
+
+    useHotKeys($root, {
+      space: () => play(),
+      keyn: () => playNext(),
+      keyp: () => playPrev(),
+      home: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 20),
+      pageup: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 5),
+      end: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 20),
+      pagedown: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 5),
+    })
 
     return {
       name,

@@ -16,11 +16,15 @@ export class PlaylistDatabase {
     this.tdb = createLocalDB('t')
   }
 
-  async getPlaylistTracks(id: string, progress?: ProgressFn): Promise<string[]> {
+  async getPlaylistTracks(id: string, progress?: ProgressFn, requested?: string): Promise<string[]> {
     const { snapshot_id: current } = await this.client.getPlaylist(id, {
       fields: 'snapshot_id',
       market: 'SE',
     })
+
+    if (requested && current !== requested) {
+      throw new Error('Incorrect version')
+    }
 
     const [previous] = await this.db.getOrCompute(`${id}:version`, async () => [current])
 

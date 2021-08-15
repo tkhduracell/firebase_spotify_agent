@@ -1,4 +1,5 @@
-import { onMounted, onUnmounted } from '@vue/composition-api'
+import { onMounted, onUnmounted, reactive } from '@vue/composition-api'
+import { createGlobalState } from '@vueuse/core'
 import SpotifyWebApi from 'spotify-web-api-js'
 import { useInterval } from 'vue-composable'
 import { Route } from 'vue-router'
@@ -47,4 +48,25 @@ export function useSpotifyRedirect(
   }
 
   return { client, reauth }
+}
+
+const spotifyUser = createGlobalState(() =>
+  reactive({
+    id: '',
+    name: '',
+  })
+)
+
+export function useSpotifyUser(client?: SpotifyWebApi.SpotifyWebApiJs) {
+  const state = spotifyUser()
+
+  if (client) {
+    onMounted(async () => {
+      const u = await client.getMe()
+      state.name = u.display_name ?? ''
+      state.id = u.id
+    })
+  }
+
+  return state
 }
