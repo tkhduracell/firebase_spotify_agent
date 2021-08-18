@@ -10,7 +10,7 @@
           <b-form-row>
             <b-col cols="6">
               <b-form-input type="text" v-model="playlist.url" />
-              <b-form-checkbox v-model="sorted">
+              <b-form-checkbox v-model="sorted" class="mt-1">
                 Sort by tempo?
               </b-form-checkbox>
             </b-col>
@@ -19,10 +19,10 @@
       </b-col>
     </b-row>
     <b-row class="mt-3">
-      <b-col sm="12" order-sm="1" lg="6" order-lg="0" v-if="loading.info || !playlist.info">
+      <b-col order="1" cols="12" md="12" offset-md="0" lg="6" order-lg="1" v-if="loading.info || !playlist.info">
         <b-spinner />
       </b-col>
-      <b-col sm="12" order-sm="1" lg="6" order-lg="0" v-else>
+      <b-col order="1" cols="12" md="12" offset-md="0" lg="6" order-lg="1" v-else>
         <h2 v-text="playlist.info.name" />
         <p v-if="playlist.tracks.length > 0" v-text="`${playlist.tracks.length} songs`" />
         <p v-if="playlist.info.description" v-text="playlist.info.description" class="small" />
@@ -30,11 +30,13 @@
         <b-spinner v-if="loading.tracks" />
         <div v-if="playlist.tracks.length > 0">
           <div v-for="(t, idx) in playlist.tracks" :key="idx + t.id">
-            <b-link @click="play(t)" v-text="trackFormat(t, true)" />
+            <div class="row">
+              <b-link @click="play(t)" v-text="trackFormat(t, true)" class="col-12 text-truncate" />
+            </div>
           </div>
         </div>
       </b-col>
-      <b-col sm="8" offset-sm="1" order-sm="0" lg="6" offset-lg="1" order-lg="1" xl="4" class="">
+      <b-col order="0" cols="12" sm="8" offset-sm="2" md="8" offset-md="2" lg="6" order-lg="2" offset-lg="0" xl="4" class="">
         <h2>Tracks per tempo</h2>
         <Chart :options="playlist.chartoptions" :chartData="playlist.chart" />
       </b-col>
