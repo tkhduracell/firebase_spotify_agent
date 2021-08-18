@@ -28,6 +28,9 @@
     </b-navbar>
     <router-view class="mt-4" />
     <footer>
+      <b-link v-b-modal.signin v-if="!user.id" class="ml-1">
+        <b-icon-lock-fill />
+      </b-link>
       Version
       <a
         class="text-monospace"
@@ -35,15 +38,17 @@
         href="https://github.com/tkhduracell/firebase_spotify_agent/commits/main"
       />
       - <span class="text-monospace" v-text="env.BUILD_TIME" />
-      <b-link v-b-modal.signin v-if="!user.id" class="ml-1">Sign In</b-link>
     </footer>
     <b-modal id="signin" title="Sign In" @ok="doSignIn">
       <b-row class="my-1">
+        <b-col cols="12" class="mb-3">
+          As an admin you can help keeping the track database up-to date. If you are intrested in don't hesitate to contact me.
+        </b-col>
         <b-col sm="2">
           <label for="input-email">Email:</label>
         </b-col>
         <b-col sm="10">
-          <b-form-input v-model="form.user" id="input-email" size="sm" placeholder="Enter your email"></b-form-input>
+          <b-form-input v-model="form.user" id="input-email" size="sm" placeholder="Enter your email" />
         </b-col>
       </b-row>
       <b-row class="my-1">
@@ -51,7 +56,7 @@
           <label for="input-password">Password:</label>
         </b-col>
         <b-col sm="10">
-          <b-form-input v-model="form.pass" id="input-password" size="sm" placeholder="Enter your password"></b-form-input>
+          <b-form-input v-model="form.pass" id="input-password" size="sm" placeholder="Enter your password" type="password" />
         </b-col>
       </b-row>
     </b-modal>
@@ -90,7 +95,7 @@ export default defineComponent({
 footer {
   text-align: right;
   position: fixed;
-  bottom: 0;
+  top: 6em;
   width: 100%;
   font-size: 0.6em;
   padding-right: 10px;
