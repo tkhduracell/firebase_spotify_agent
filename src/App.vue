@@ -38,6 +38,12 @@
         href="https://github.com/tkhduracell/firebase_spotify_agent/commits/main"
       />
       - <span class="text-monospace" v-text="env.BUILD_TIME" />
+      -
+      <div class="d-inline-block d-sm-none">XS</div>
+      <div class="d-none d-sm-inline-block d-md-none">SM</div>
+      <div class="d-none d-md-inline-block d-lg-none">MD</div>
+      <div class="d-none d-lg-inline-block d-xl-none">LG</div>
+      <div class="d-none d-xl-inline-block">XL</div>
     </footer>
     <b-modal id="signin" title="Sign In" @ok="doSignIn">
       <b-row class="my-1">
