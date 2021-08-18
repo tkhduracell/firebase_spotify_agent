@@ -19,13 +19,13 @@
       </b-col>
     </b-row>
     <b-row class="mt-3">
-      <b-col cols="6" v-if="loading.info">
+      <b-col sm="12" order-sm="1" lg="6" order-lg="0" v-if="loading.info || !playlist.info">
         <b-spinner />
       </b-col>
-      <b-col cols="6" v-else>
+      <b-col sm="12" order-sm="1" lg="6" order-lg="0" v-else>
         <h2 v-text="playlist.info.name" />
         <p v-if="playlist.tracks.length > 0" v-text="`${playlist.tracks.length} songs`" />
-        <p v-if="playlist.info.description" v-text="playlist.info.description" />
+        <p v-if="playlist.info.description" v-text="playlist.info.description" class="small" />
 
         <b-spinner v-if="loading.tracks" />
         <div v-if="playlist.tracks.length > 0">
@@ -34,7 +34,7 @@
           </div>
         </div>
       </b-col>
-      <b-col cols="6" class="">
+      <b-col sm="8" offset-sm="1" order-sm="0" lg="6" offset-lg="1" order-lg="1" xl="4" class="">
         <h2>Tracks per tempo</h2>
         <Chart :options="playlist.chartoptions" :chartData="playlist.chart" />
       </b-col>
