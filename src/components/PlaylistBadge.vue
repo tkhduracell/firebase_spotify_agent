@@ -1,39 +1,26 @@
 <template>
-  <div class="playlist-badge user-select-none" @click="open()" router-tag="div" target="_blank">
+  <div class="playlist-badge user-select-none" @click="$emit('click')" router-tag="div" target="_blank">
     <div class="img">
-      <b-img :src="cover" fluid />
+      <b-img :src="img" fluid />
     </div>
     <div class="text">
-      <div class="header">Spelar från</div>
-      <div class="name" v-text="context.name" />
-      <div class="owner" v-text="context.owner.display_name" />
+      <div class="header" v-text="header" />
+      <div class="name" v-text="title" />
+      <div class="owner" v-text="description" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType } from '@vue/composition-api'
-
-import { minBy } from 'lodash'
+import { defineComponent } from '@vue/composition-api'
 
 export default defineComponent({
   name: 'PlaylistBadge',
   props: {
-    context: {
-      type: Object as PropType<SpotifyApi.PlaylistObjectSimplified>,
-      required: true,
-    },
-  },
-  setup(props) {
-    return {
-      cover: computed(() => minBy(props.context.images, i => i.height)?.url),
-      open: () => {
-        Object.assign(document.createElement('a'), {
-          target: '_blank',
-          href: props.context.external_urls.spotify,
-        }).click()
-      },
-    }
+    header: { type: String, required: false, default: () => 'Spelar från' },
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    img: { type: String, required: true },
   },
 })
 </script>

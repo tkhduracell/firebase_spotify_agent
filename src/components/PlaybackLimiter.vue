@@ -5,7 +5,16 @@
         <b-form-checkbox :checked="enabled" @change="$emit('update:enabled', $event)" class="check-button" switch size="lg" />
       </b-col>
       <b-col class="label main mr-2" cols="auto">Skip to next after</b-col>
-      <b-col v-for="sec in fixed" :key="'set-' + sec" cols="auto">
+      <b-col
+        v-for="sec in fixed"
+        :key="'set-' + sec"
+        cols="auto"
+        v-b-tooltip="{
+          title: 'Have already passed this. Please wait for the next song...',
+          placement: 'top',
+          disabled: !enabled || !(enabled && progress + 10 > sec),
+        }"
+      >
         <b-button
           :disabled="!enabled || progress + 10 > sec"
           :class="['fixed', 'mr-1', [30, 150].includes(sec) ? 'hide-large' : '']"

@@ -29,7 +29,7 @@
           v-model="bpm"
           number
           autofocus
-          @keydown.space="count"
+          @keydown.space.prevent.stop="count"
         />
       </b-form-group>
       <div v-if="last > 0">Beats: {{ history.length - 1 }}, mean: {{ meanMs.toFixed(0) }} ms, bpm: {{ meanBPM }}</div>

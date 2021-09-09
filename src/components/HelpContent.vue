@@ -4,7 +4,7 @@
       <b-col cols="3">
         <b-img fluid src="favicon2.svg" />
       </b-col>
-      <b-col cols="9">
+      <b-col cols="9" align-self="center">
         <h1>Welcome to Spotify Agent!</h1>
         <p>
           This is a music tool written to ease Spotify playback during dance traning.
@@ -12,7 +12,7 @@
       </b-col>
     </b-row>
 
-    <h2>How do I use it?</h2>
+    <h2 class="mt-3">How do I use it?</h2>
     <p>Let's go through each step.</p>
     <h4>1. Open this page</h4>
     <p>Open this page in any modern browser.</p>
@@ -41,21 +41,20 @@
           <b-td>
             <span class="pt-1 ml-4 d-inline-block mr-4" v-text="device.name" />
           </b-td>
-          <b-td>
+          <b-td class="presets">
             <b-button
-              v-for="pl in playlists"
-              :key="pl.key + device.id"
+              v-for="pl in presets"
+              :key="pl.id + device.id"
               variant="primary"
               class="mr-2"
               @click="
                 $emit('play', {
-                  id: pl.id,
+                  id: pl.uri,
                   device,
                 })
               "
             >
-              {{ pl.text }}
-              <b-icon-play-fill scale="1.2" />
+              {{ pl.name }}
             </b-button>
           </b-td>
         </b-tr>
@@ -67,11 +66,13 @@
       <li>Switch track after a fixed number of seconds.</li>
       <li>Limit playlist to a tempo range.</li>
       <li>Lower volume between tracks.</li>
+      <li>Hotkeys (space, p, n, pgup, pgdown, hoem, end)</li>
     </ul>
   </div>
 </template>
 
 <script lang="ts">
+import { PlaylistInfo } from '@/presets'
 import { defineComponent, onMounted, onUnmounted, PropType } from '@vue/composition-api'
 import { useInterval } from 'vue-composable'
 
@@ -81,6 +82,11 @@ export default defineComponent({
       type: Array as PropType<SpotifyApi.UserDevice[]>,
       required: false,
     },
+    presets: {
+      type: Array as PropType<PlaylistInfo[]>,
+      required: false,
+      default: () => [],
+    },
   },
   setup(props, { emit }) {
     const { start, remove } = useInterval(() => emit('devices:reload'), 2000)
@@ -88,14 +94,13 @@ export default defineComponent({
     onMounted(start)
     onUnmounted(remove)
 
-    const playlists = [
-      { key: 'bugg', id: 'spotify:playlist:00968xdUCWZgRHZqepn8IQ', text: 'Bugg' },
-      { key: 'lindy', id: 'spotify:playlist:031EwXmrqlByHXO3QTd3ji', text: 'Lindy' },
-      { key: 'boggie', id: 'spotify:playlist:5VrKW92gaXcmsYWsY7DyJm', text: 'Boogie' },
-    ]
-
-    return { playlists }
+    return {}
   },
 })
 </script>
-<style></style>
+
+<style lang="scss">
+.presets {
+  display: flex;
+}
+</style>

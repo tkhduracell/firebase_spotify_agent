@@ -15,12 +15,16 @@
 
           <b-row align-v="center" align-h="center">
             <b-col cols="auto" class="d-block d-lg-none">
-              <PlaylistBadge :context="context" v-if="context" />
+              <PlaylistSelector :context="context" v-if="context" @play="play($event)" />
             </b-col>
             <b-col cols="auto">
-              <b-button variant="link" @click="playPrev" :disabled="queue.sent">
+              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playAgain">
+                <b-icon-arrow-counterclockwise scale="2.0" class="mt-4 mb-4" />
+              </HelpfulButton>
+
+              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playPrev">
                 <b-icon-skip-forward-circle scale="2.0" class="mt-4 mb-4" />
-              </b-button>
+              </HelpfulButton>
 
               <b-button variant="link" @click="play" v-if="state.is_playing">
                 <b-icon-pause scale="3.0" class="mt-4 mb-4" />
@@ -29,9 +33,9 @@
                 <b-icon-play scale="3.0" class="mt-4 mb-4" />
               </b-button>
 
-              <b-button variant="link" @click="playNext" :disabled="queue.sent">
+              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playNext">
                 <b-icon-skip-backward-circle scale="2.0" class="mt-4 mb-4" />
-              </b-button>
+              </HelpfulButton>
             </b-col>
             <b-col cols="auto"
               ><span class="seconds-left"> {{ seconds.toFixed() }} / {{ secondsMax.toFixed() }} seconds </span>
@@ -102,7 +106,7 @@
         </b-row>
       </b-col>
       <b-col cols="5" class="d-none d-lg-block position-relative">
-        <PlaylistBadge :context="context" v-if="context" class="d-none d-lg-inline-flex overlay-playlist" />
+        <PlaylistSelector :context="context" :items="presets" v-if="context" @play="play($event)" />
         <b-img
           v-for="img in state.item.album.images.filter(i => i.width === 640)"
           :key="img.url"
@@ -130,6 +134,7 @@
     <b-row v-else>
       <b-col class="mt-4" offset="3" cols="6">
         <HelpContent
+          :presets="presets"
           :devices="devices ? devices.devices : undefined"
           @play="play($event.id, $event.device)"
           @devices:reload="loadDevices"
@@ -145,16 +150,17 @@
 <script lang="ts">
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable @typescript-eslint/camelcase */
-import { computed, defineComponent, onMounted, onUnmounted, reactive, ref, toRef, watch } from '@vue/composition-api'
+import { computed, defineComponent, reactive, ref, toRef, watch } from '@vue/composition-api'
 
 import PlaybackLimiter from '@/components/PlaybackLimiter.vue'
 import PlaybackAutoQueuer from '@/components/PlaybackAutoQueuer.vue'
 import PlaybackAutoClimb from '@/components/PlaybackAutoClimb.vue'
 import PlaybackAutoFade from '@/components/PlaybackAutoFade.vue'
-import PlaylistBadge from '@/components/PlaylistBadge.vue'
+import PlaylistSelector from '@/components/PlaylistSelector.vue'
 import HelpContent from '@/components/HelpContent.vue'
 import NextUp from '@/components/NextUp.vue'
 import EditModal from '@/components/EditModal.vue'
+import HelpfulButton from '@/components/HelpfulButton.vue'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
@@ -165,6 +171,7 @@ import { useVolume } from '@/volume'
 import { QueueState } from '@/types'
 import { useUser } from '@/firebase'
 import { useHotKeys } from '@/hotkeys'
+import { usePresets } from '@/presets'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -200,10 +207,11 @@ export default defineComponent({
     PlaybackAutoQueuer,
     PlaybackAutoClimb,
     PlaybackAutoFade,
-    PlaylistBadge,
+    PlaylistSelector,
     HelpContent,
     NextUp,
     EditModal,
+    HelpfulButton,
   },
   setup(props, { root: { $root, $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
@@ -213,6 +221,7 @@ export default defineComponent({
     const playlist = ref<TrackWithBPM[]>([])
     const current = ref<TrackWithBPM>()
     const error = ref<SpotifyApi.ErrorObject>()
+    const ready = ref(false)
 
     const queue = reactive<QueueState>({
       loading: true,
@@ -235,7 +244,7 @@ export default defineComponent({
     })
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client, reauth } = useSpotifyRedirect($route, () => null, update)
+    const { client, reauth } = useSpotifyRedirect($route, start, update)
     const clock = useClock()
     const devices = useDevices(client)
     const { startFadeDown, startFadeUp, fading } = useVolume(client)
@@ -250,6 +259,10 @@ export default defineComponent({
 
     function devOpts() {
       return state.value?.device?.id ? { device_id: state.value.device.id } : {}
+    }
+
+    async function start() {
+      ready.value = true
     }
 
     async function update() {
@@ -413,7 +426,7 @@ export default defineComponent({
         startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
       }
 
-      if (settings.autoFadeEnabled && !passed(s, 5)) {
+      if (settings.autoFadeEnabled && !passed(s, 4)) {
         startFadeUp(devOpts())
       }
     })
@@ -456,6 +469,10 @@ export default defineComponent({
       await client.skipToPrevious(devOpts())
     }
 
+    async function playAgain() {
+      await client.seek(0, devOpts())
+    }
+
     async function updateVolume(vol: number) {
       if (vol !== null && vol !== undefined) {
         await client.setVolume(Math.max(0, Math.min(100, vol)), devOpts())
@@ -481,6 +498,8 @@ export default defineComponent({
       pagedown: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 5),
     })
 
+    const { playlists: presets } = usePresets(client, ready)
+
     return {
       name,
       ...clock,
@@ -497,6 +516,7 @@ export default defineComponent({
       play,
       playNext,
       playPrev,
+      playAgain,
       playlist,
       context,
       queue,
@@ -507,6 +527,7 @@ export default defineComponent({
       updateVolume,
       updateTrackInfo,
       canEdit: computed(() => !!user.id),
+      presets,
     }
   },
 })
@@ -534,9 +555,6 @@ export default defineComponent({
     }
     .seconds-left {
       font-size: 2em;
-    }
-    .overlay-playlist {
-      float: right;
     }
 
     .bpm {
