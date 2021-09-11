@@ -492,6 +492,7 @@ export default defineComponent({
       space: () => play(),
       keyn: () => playNext(),
       keyp: () => playPrev(),
+      keyr: () => playAgain(),
       home: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 20),
       pageup: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 5),
       end: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 20),
