@@ -84,6 +84,7 @@
             @update:max="settings.autoClimbMax = $event"
             :step="settings.autoClimbStep"
             @update:step="settings.autoClimbStep = $event"
+            :limit="settings.timeLimitEnabled ? settings.timeLimitSeconds : undefined"
             class="mb-2"
           />
         </b-overlay>

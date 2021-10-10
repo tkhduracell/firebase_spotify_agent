@@ -58,11 +58,16 @@
       </b-col>
       <b-col class="label last" cols="auto">step </b-col>
     </b-row>
+    <b-row align-content="right">
+      <b-col class="label main"></b-col>
+      <b-col class="pl-0" v-if="minutes">One cycle takes {{ minutes }} minutes over {{ tracks }} tracks.</b-col>
+      <b-col class="pl-0" v-else>One cycle over {{ tracks }} tracks.</b-col>
+    </b-row>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from '@vue/composition-api'
+import { computed, defineComponent } from '@vue/composition-api'
 
 export default defineComponent({
   name: 'PlaybackAutoIncrease',
@@ -72,6 +77,24 @@ export default defineComponent({
     min: { type: Number, required: true },
     max: { type: Number, required: true },
     step: { type: Number, required: true },
+    limit: { type: Number, required: false },
+  },
+  setup(props) {
+    const tracks = computed(() => {
+      const mod = (props.max - props.min) % props.step
+      return mod === 0 ? (props.max - props.min) / props.step + 1 : Math.ceil((props.max - props.min) / props.step)
+    })
+
+    return {
+      tracks,
+      minutes: computed(() => {
+        if (props.limit) {
+          const exact = (tracks.value * props.limit) / 60
+          return Math.round(exact)
+        }
+        return null
+      }),
+    }
   },
 })
 </script>
