@@ -312,7 +312,7 @@ export default defineComponent({
             await client.skipToNext(devOpts())
           }
           queue.sent = false
-          historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 20)
+          historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 12)
           current.value = await tracks.getTrackWithTempo(item.id)
         }
       }
