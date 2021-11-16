@@ -30,6 +30,7 @@ import { computed, defineComponent, PropType } from '@vue/composition-api'
 import { minBy } from 'lodash'
 import PlaylistBadge from '@/components/PlaylistBadge.vue'
 import { PlaylistInfo } from '@/presets'
+import { SpotifyApi } from '@/auth'
 
 export default defineComponent({
   components: { PlaylistBadge },
@@ -37,20 +38,20 @@ export default defineComponent({
   props: {
     context: {
       type: Object as PropType<SpotifyApi.PlaylistObjectSimplified>,
-      required: true,
+      required: true
     },
     items: {
       type: Array as PropType<PlaylistInfo[]>,
       required: false,
-      default: () => [],
-    },
-  },
-  setup(props) {
-    return {
-      cover: computed(() => minBy(props.context.images, i => i.height)?.url ?? ''),
-      others: computed(() => props.items.filter(p => p.id !== props.context.id)),
+      default: () => []
     }
   },
+  setup (props) {
+    return {
+      cover: computed(() => minBy(props.context.images, i => i.height)?.url ?? ''),
+      others: computed(() => props.items.filter(p => p.id !== props.context.id))
+    }
+  }
 })
 </script>
 

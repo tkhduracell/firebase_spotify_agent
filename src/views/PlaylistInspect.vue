@@ -45,7 +45,6 @@
 </template>
 
 <script lang="ts">
-/* eslint-disable @typescript-eslint/camelcase */
 import { computed, defineComponent, reactive, ref } from '@vue/composition-api'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
@@ -59,11 +58,11 @@ import Chart from '@/components/Chart.vue'
 export default defineComponent({
   name: 'PlaylistInspect',
   components: { Chart },
-  setup(props, { root: { $route } }) {
+  setup (props, { root: { $route } }) {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const { client } = useSpotifyRedirect($route, onReady)
 
-    function trackFormat(track: TrackWithBPM, showBPM = false): string {
+    function trackFormat (track: TrackWithBPM, showBPM = false): string {
       // eslint-disable-next-line no-debugger
       if (typeof track.bpm !== 'number') debugger
       const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
@@ -77,9 +76,9 @@ export default defineComponent({
     const playlistId = computed(() =>
       playlistUrl.value
         ? playlistUrl.value
-            .split('/')
-            .slice(-1)
-            .find(() => true) ?? ''
+          .split('/')
+          .slice(-1)
+          .find(() => true) ?? ''
         : ''
     )
 
@@ -139,7 +138,7 @@ export default defineComponent({
               'rgba(75, 192, 192, 0.2)',
               'rgba(54, 162, 235, 0.2)',
               'rgba(153, 102, 255, 0.2)',
-              'rgba(201, 203, 207, 0.2)',
+              'rgba(201, 203, 207, 0.2)'
             ],
             borderColor: [
               'rgb(255, 99, 132)',
@@ -155,24 +154,24 @@ export default defineComponent({
               'rgb(75, 192, 192)',
               'rgb(54, 162, 235)',
               'rgb(153, 102, 255)',
-              'rgb(201, 203, 207)',
+              'rgb(201, 203, 207)'
             ],
-            borderWidth: 1,
-          },
-        ],
+            borderWidth: 1
+          }
+        ]
       }
     })
 
-    async function play(track: TrackWithBPM) {
+    async function play (track: TrackWithBPM) {
       await client.queue('spotify:track:' + track.id)
       setTimeout(async () => {
         await client.skipToNext()
       }, 500)
     }
 
-    async function onReady() {
+    async function onReady () {
       const state = await client.getMyCurrentPlaybackState()
-      if (state.context?.type == 'playlist') {
+      if (state.context?.type === 'playlist') {
         playlistUrl.value = state.context.external_urls?.spotify ?? ''
       }
     }
@@ -182,7 +181,7 @@ export default defineComponent({
       play,
       loading: reactive({
         info: loadingInfo,
-        tracks: loadingTracks,
+        tracks: loadingTracks
       }),
       playlist: reactive({
         url: playlistUrl,
@@ -194,35 +193,35 @@ export default defineComponent({
           legend: { display: false },
           scales: {
             gridLines: {
-              display: false,
+              display: false
             },
             yAxes: [
               {
                 gridLines: {
-                  color: 'rgba(255, 255, 255, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.2)'
                 },
                 ticks: {
-                  fontColor: 'rgba(255, 255, 255, 0.9)',
-                },
-              },
+                  fontColor: 'rgba(255, 255, 255, 0.9)'
+                }
+              }
             ],
             xAxes: [
               {
                 gridLines: {
-                  color: 'rgba(255, 255, 255, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.2)'
                 },
                 ticks: {
-                  fontColor: 'rgba(255, 255, 255, 0.9)',
-                },
-              },
-            ],
-          },
-        },
+                  fontColor: 'rgba(255, 255, 255, 0.9)'
+                }
+              }
+            ]
+          }
+        }
       }),
       trackFormat,
-      sorted,
+      sorted
     }
-  },
+  }
 })
 </script>
 

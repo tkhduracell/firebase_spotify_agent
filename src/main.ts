@@ -6,9 +6,9 @@ import VueMeta from 'vue-meta'
 
 import './App.scss'
 
-Vue.config.productionTip = false
-
 import composition from '@vue/composition-api'
+
+Vue.config.productionTip = false
 
 Vue.use(composition)
 Vue.use(BootstrapVue)
@@ -17,5 +17,5 @@ Vue.use(VueMeta)
 
 new Vue({
   router,
-  render: h => h(App),
+  render: h => h(App)
 }).$mount('#app')

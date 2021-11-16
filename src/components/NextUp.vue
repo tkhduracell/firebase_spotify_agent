@@ -21,8 +21,8 @@ import { QueueState } from '@/types'
 
 export default defineComponent({
   props: {
-    queue: { type: Object as PropType<QueueState>, required: true },
-  },
+    queue: { type: Object as PropType<QueueState>, required: true }
+  }
 })
 </script>
 

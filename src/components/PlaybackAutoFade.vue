@@ -52,8 +52,8 @@ export default defineComponent({
   props: {
     enabled: { type: Boolean, required: true },
     volume: { type: Number, required: true },
-    isFading: { type: Boolean, required: false },
-  },
+    isFading: { type: Boolean, required: false }
+  }
 })
 </script>
 

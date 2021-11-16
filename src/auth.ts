@@ -4,7 +4,7 @@ import SpotifyWebApi from 'spotify-web-api-js'
 import { useInterval } from 'vue-composable'
 import { Route } from 'vue-router'
 
-export function useSpotifyRedirect(
+export function useSpotifyRedirect (
   $route: Route,
   onInit?: () => unknown,
   onRefresh?: () => unknown,
@@ -43,7 +43,7 @@ export function useSpotifyRedirect(
     start()
   })
 
-  function reauth() {
+  function reauth () {
     document.location = authUrl
   }
 
@@ -53,11 +53,11 @@ export function useSpotifyRedirect(
 const spotifyUser = createGlobalState(() =>
   reactive({
     id: '',
-    name: '',
+    name: ''
   })
 )
 
-export function useSpotifyUser(client?: SpotifyWebApi.SpotifyWebApiJs) {
+export function useSpotifyUser (client?: SpotifyWebApi.SpotifyWebApiJs) {
   const state = spotifyUser()
 
   if (client) {
@@ -70,3 +70,5 @@ export function useSpotifyUser(client?: SpotifyWebApi.SpotifyWebApiJs) {
 
   return state
 }
+
+export type SpotifyApi = SpotifyWebApi.SpotifyWebApiJs

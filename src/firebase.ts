@@ -2,6 +2,10 @@ import { onMounted, onUnmounted, reactive } from '@vue/composition-api'
 import { createGlobalState } from '@vueuse/core'
 import { initializeApp } from 'firebase/app'
 
+import { getAuth, signInWithEmailAndPassword, Unsubscribe } from 'firebase/auth'
+
+import { getFirestore } from 'firebase/firestore'
+
 const firebaseConfig = {
   apiKey: 'AIzaSyAsSsYfHVML9a5Jc0F7kc7sLfXY9nJyG4o',
   authDomain: 'filiplindqvist-com-ea66d.firebaseapp.com',
@@ -9,29 +13,25 @@ const firebaseConfig = {
   projectId: 'filiplindqvist-com-ea66d',
   storageBucket: 'filiplindqvist-com-ea66d.appspot.com',
   messagingSenderId: '530377340060',
-  appId: '1:530377340060:web:ed41192de4b4e1c87fe959',
+  appId: '1:530377340060:web:ed41192de4b4e1c87fe959'
 }
 
 initializeApp(firebaseConfig)
-
-import { getAuth, signInWithEmailAndPassword, Unsubscribe } from 'firebase/auth'
 export const auth = getAuth()
 
-export function signIn(user: string, pass: string) {
+export function signIn (user: string, pass: string) {
   return signInWithEmailAndPassword(auth, user, pass)
 }
-
-import { getFirestore } from 'firebase/firestore'
 export const firestore = getFirestore()
 
 const useGlobalAuth = createGlobalState(() =>
   reactive({
     id: '',
-    name: '',
+    name: ''
   })
 )
 
-export function useUser() {
+export function useUser () {
   const state = useGlobalAuth()
   let unsubcribe: Unsubscribe
   onMounted(() => {

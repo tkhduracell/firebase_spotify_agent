@@ -9,16 +9,16 @@ export default {
   props: {
     chartData: {
       type: Object,
-      default: null,
+      default: null
     },
     options: {
       type: Object,
-      default: null,
-    },
+      default: null
+    }
   },
   mixins: [reactiveProp],
-  mounted() {
+  mounted () {
     this.renderChart(this.chartData, this.options)
-  },
+  }
 }
 </script>

@@ -58,11 +58,10 @@
 </template>
 
 <script lang="ts">
-/* eslint-disable @typescript-eslint/camelcase */
-import { defineComponent, reactive, computed } from '@vue/composition-api'
+import { defineComponent, reactive, computed, Ref } from '@vue/composition-api'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
-import { useSpotifyRedirect } from '@/auth'
+import { useSpotifyRedirect, SpotifyApi } from '@/auth'
 import { PlaylistDatabase } from '@/playlists'
 import { createLocalDB, VERSION } from '@/local-db'
 
@@ -71,17 +70,26 @@ import Chart from '@/components/Chart.vue'
 
 import { uniq, sortBy, flatten, uniqBy, chunk, groupBy, filter, fromPairs } from 'lodash'
 
-function id(url: string): string {
+function id (url: string): string {
   return url.replace(/https:\/\/open\.spotify\.com\/playlist\/(\w{20,24})(\?.+)?/i, '$1')
 }
-function clean(url: string): string {
+function clean (url: string): string {
   return url.replace(/(https:\/\/open\.spotify\.com\/playlist\/\w{20,24})(\?.+)?/i, '$1')
+}
+function isError (obj: unknown, code: number) {
+  if (obj && typeof obj === 'object') {
+    const x = obj as { status: number }
+    if (x.status === code) {
+      return true
+    }
+  }
+  return false
 }
 
 export default defineComponent({
   name: 'PlaylistCreate',
   components: { Chart },
-  setup(props, { root: { $route } }) {
+  setup (props, { root: { $route } }) {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const { client, reauth } = useSpotifyRedirect($route, onReady, () => '', [
       'user-read-playback-state',
@@ -89,10 +97,10 @@ export default defineComponent({
       'user-read-currently-playing',
       'playlist-read-collaborative',
       'playlist-read-private',
-      'playlist-modify-private',
+      'playlist-modify-private'
     ])
 
-    function trackFormat(track: TrackWithBPM, showBPM = false): string {
+    function trackFormat (track: TrackWithBPM, showBPM = false): string {
       const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
       return `${prefix}${track.artist} - ${track.title}`
     }
@@ -101,20 +109,20 @@ export default defineComponent({
     const playlistsDB = new PlaylistDatabase(client)
 
     const form = useStorage(VERSION + ':pl-urls', {
-      urls: [{ value: '' }],
-    })
+      urls: [{ value: '' }] as { value: string }[]
+    }) as unknown as Ref<{ urls: { value: string }[] }>
 
-    async function onReady() {
+    async function onReady () {
       try {
         const state = await client.getMyCurrentPlaybackState()
-        if (state.context?.type == 'playlist') {
+        if (state.context?.type === 'playlist') {
           if (!form.value.urls[0].value) {
             form.value.urls[0].value = state.context.external_urls?.spotify ?? ''
           }
         }
         form.value = { ...form.value }
       } catch (error) {
-        if (error.status === 401) {
+        if (isError(error, 401)) {
           reauth()
         }
       }
@@ -139,7 +147,7 @@ export default defineComponent({
               playlistInfo.getOrCompute(id, () =>
                 client.getPlaylist(id, { fields: 'name,description,uri,owner.id,public,type', market: 'SE' })
               ),
-              playlistsDB.getPlaylistTracks(id).then(tracksDB.getTracksWithTempo.bind(tracksDB)),
+              playlistsDB.getPlaylistTracks(id).then(tracksDB.getTracksWithTempo.bind(tracksDB))
             ])
             return { id, info, tracks: sortBy(tracks, ['bpm', 'artist']) }
           })
@@ -165,7 +173,7 @@ export default defineComponent({
       return { tracks, length: tracks.length, total: flat.length, duplicates }
     })
 
-    function description(url: string): string {
+    function description (url: string): string {
       const _id = id(url)
       const info = playlists.value.find(p => p.id === _id)?.info
       return info?.name ?? '...'
@@ -174,28 +182,33 @@ export default defineComponent({
     return {
       form,
       master,
-      add: function() {
-        form.value.urls.push(reactive({ value: '' }))
+      add: function () {
+        const v = reactive({ value: '' })
+        form.value.urls.push(v)
+      },
+      play: function (t: TrackWithBPM) {
+        const { id } = t
+        client.play({ context_uri: `spotify:track:${id}` })
       },
       playlists,
       trackFormat,
       description,
       clean,
-      async create(name: string) {
+      async create (name: string) {
         const user = await client.getMe()
         const playlist = await client.createPlaylist(user.id, {
           name,
           public: false,
-          description: `Created by Spotify Agent at ${new Date().toISOString()}. Sorted ascending tempo (low to high).`,
+          description: `Created by Spotify Agent at ${new Date().toISOString()}. Sorted ascending tempo (low to high).`
         })
         const chunks = chunk(master.value.tracks, 100)
         for (const part of chunks) {
           const uris = part.map(t => `spotify:track:${t.id}`)
           await client.addTracksToPlaylist(playlist.id, uris)
         }
-      },
+      }
     }
-  },
+  }
 })
 </script>
 

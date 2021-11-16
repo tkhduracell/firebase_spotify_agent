@@ -51,16 +51,14 @@
 </template>
 
 <script lang="ts">
-/* eslint-disable @typescript-eslint/camelcase */
 import { defineComponent, ref, watch } from '@vue/composition-api'
-
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
-import { useSpotifyRedirect } from '@/auth'
+import { useSpotifyRedirect, SpotifyApi } from '@/auth'
 
 export default defineComponent({
   name: 'Recommendation',
   components: {},
-  setup(props, { root: { $route } }) {
+  setup (props, { root: { $route } }) {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const { client } = useSpotifyRedirect($route, onReady)
 
@@ -73,7 +71,6 @@ export default defineComponent({
       { value: 'spotify:artist:4rMk4gSVtsxoOb7NPwF6hA', text: 'Donnez' },
       { value: 'spotify:artist:3MjqsvJtWHZFbk4bEAaskX', text: 'Streaplers' },
       { value: 'spotify:artist:29JwBerAT0YALGfItKsEbT', text: 'Casanovas' },
-      // eslint-disable-next-line prettier/prettier
       { value: 'spotify:artist:53gEW5pRU9o1oYP0iMgHk7', text: 'Claes Lövgrens' },
       { value: 'spotify:artist:7mTV1xDo95GO6Bc7ttBFm8', text: 'Sannex' },
       { value: 'spotify:artist:3fOgHwbiAAOouhhFf9yS8W', text: 'Blender' },
@@ -82,38 +79,38 @@ export default defineComponent({
       { value: 'spotify:artist:69nQmMVKUKXmuYWC8aucZf', text: 'Skåningarna' },
       {
         value: 'spotify:artist:3ktAhWMnoYiz6UpBEKfv5i',
-        text: 'Kikki Danielsson',
-      },
+        text: 'Kikki Danielsson'
+      }
     ]
     const seed_artists = ref<string[]>([
       options_artists[0].value,
       options_artists[1].value,
       options_artists[2].value,
       options_artists[4].value,
-      options_artists[5].value,
+      options_artists[5].value
     ])
 
     const options_tracks = [
       {
         value: 'spotify:track:1qwQjUYCcYW3qD7ilRHcF2',
-        text: 'Accordition Thing',
+        text: 'Accordition Thing'
       },
       {
         value: 'spotify:track:4QB01XWrPARKASCUJzbI8U',
-        text: 'På Min Balkong',
+        text: 'På Min Balkong'
       },
       {
         value: 'spotify:track:63oxarpk0RN7jJn1w9aUE0',
-        text: 'Dags Att Leka Klart',
+        text: 'Dags Att Leka Klart'
       },
       {
         value: 'spotify:track:1rKI0D9ilAB88TPx7trjix',
-        text: 'Det Var Bättre Förr',
+        text: 'Det Var Bättre Förr'
       },
       {
         value: 'spotify:track:4cD8na4gzqJzD5uhqmpskP',
-        text: 'Lite mer av din tid',
-      },
+        text: 'Lite mer av din tid'
+      }
     ]
     const seed_tracks = ref<string[]>([])
 
@@ -125,14 +122,14 @@ export default defineComponent({
       tracks.value = !r ? [] : await Promise.all(r.tracks.map(t => db.getTrackWithTempo(t.id)))
     })
 
-    async function play(track: TrackWithBPM) {
+    async function play (track: TrackWithBPM) {
       await client.queue('spotify:track:' + track.id)
       setTimeout(async () => {
         await client.skipToNext()
       }, 500)
     }
 
-    async function onReady() {
+    async function onReady () {
       recs.value = undefined
       recs.value = await client.getRecommendations({
         market: 'SE',
@@ -140,7 +137,7 @@ export default defineComponent({
         seed_artists: seed_artists.value.map(opt => opt.split(':')[2]),
         seed_genres: seed_genres.value,
         seed_tracks: seed_tracks.value.map(uri => uri.split(':')[2]),
-        target_tempo: tempo.value,
+        target_tempo: tempo.value
       })
     }
 
@@ -158,9 +155,9 @@ export default defineComponent({
 
       seed_tracks,
       seed_artists,
-      seed_genres,
+      seed_genres
     }
-  },
+  }
 })
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -291,8 +288,8 @@ const a = {
     'trip-hop',
     'turkish',
     'work-out',
-    'world-music',
-  ],
+    'world-music'
+  ]
 }
 </script>
 

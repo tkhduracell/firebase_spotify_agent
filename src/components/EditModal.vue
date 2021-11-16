@@ -47,13 +47,13 @@ import { sleep } from '@/sleep'
 
 export default defineComponent({
   props: {
-    track: { type: Object as PropType<TrackWithBPM>, required: true },
+    track: { type: Object as PropType<TrackWithBPM>, required: true }
   },
-  setup(props, { emit }) {
+  setup (props, { emit }) {
     const bpm = ref<number>(0)
     const loading = ref<boolean>(false)
 
-    async function prepare() {
+    async function prepare () {
       bpm.value = Math.round(props.track.bpm)
     }
 
@@ -83,13 +83,13 @@ export default defineComponent({
       clear()
     }, 4000)
 
-    async function count(evt: KeyboardEvent) {
+    async function count (evt: KeyboardEvent) {
       evt.preventDefault()
       last.value = new Date().getTime()
       onUpdate()
     }
 
-    async function update(bvModalEvent: BvModalEvent, next = false) {
+    async function update (bvModalEvent: BvModalEvent, next = false) {
       const { id, bpm: originalBpm } = props.track
 
       if (Math.round(originalBpm) !== Math.round(bpm.value)) {
@@ -114,7 +114,7 @@ export default defineComponent({
       }
     }
 
-    function double() {
+    function double () {
       bpm.value = Math.round((props.track.bpm ?? bpm.value) * 2)
     }
 
@@ -128,9 +128,9 @@ export default defineComponent({
       history,
       meanBPM,
       meanMs,
-      loading,
+      loading
     }
-  },
+  }
 })
 </script>
 

@@ -9,7 +9,7 @@ export type LocalDB<T> = {
 
 export const VERSION = 'v0'
 
-export function createLocalDB<T>(namespace: string): LocalDB<T> {
+export function createLocalDB<T> (namespace: string): LocalDB<T> {
   const key = (k: string) => `${VERSION}:${namespace}:${k}`
 
   Object.keys(localStorage).forEach(k => {
@@ -20,7 +20,7 @@ export function createLocalDB<T>(namespace: string): LocalDB<T> {
   })
 
   return {
-    get(_key: string): T | null {
+    get (_key: string): T | null {
       const data = localStorage.getItem(key(_key))
       if (data === null || data === undefined) {
         return null
@@ -32,10 +32,10 @@ export function createLocalDB<T>(namespace: string): LocalDB<T> {
       }
       return null
     },
-    set(_key: string, t: T): void {
+    set (_key: string, t: T): void {
       localStorage.setItem(key(_key), JSON.stringify(t))
     },
-    update(_key: string, delta: Partial<T>): T | undefined {
+    update (_key: string, delta: Partial<T>): T | undefined {
       const data = localStorage.getItem(key(_key))
       if (data !== null && data !== undefined) {
         try {
@@ -47,11 +47,11 @@ export function createLocalDB<T>(namespace: string): LocalDB<T> {
         }
       }
     },
-    has(_key: string): boolean {
+    has (_key: string): boolean {
       const d = localStorage.getItem(key(_key))
       return d !== null && d !== undefined
     },
-    clear(_key: string): boolean {
+    clear (_key: string): boolean {
       const d = localStorage.getItem(key(_key))
       if (d !== null && d !== undefined) {
         delete localStorage[key(_key)]
@@ -59,7 +59,7 @@ export function createLocalDB<T>(namespace: string): LocalDB<T> {
       }
       return false
     },
-    async getOrCompute(_key: string, fn: () => Promise<T>): Promise<T> {
+    async getOrCompute (_key: string, fn: () => Promise<T>): Promise<T> {
       const data = localStorage.getItem(key(_key))
       if (data) {
         return Promise.resolve(JSON.parse(data) as T)
@@ -68,6 +68,6 @@ export function createLocalDB<T>(namespace: string): LocalDB<T> {
         localStorage.setItem(key(_key), JSON.stringify(value))
         return value
       }
-    },
+    }
   }
 }

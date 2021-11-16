@@ -1,4 +1,4 @@
-<template>
+<template lang="html">
   <b-container fluid="lg" class="home">
     <b-row v-if="state && state.item" class="state" align-v="stretch">
       <b-col cols-sm="12" cols-md="12" cols-lg="7" align-self="center">
@@ -149,8 +149,6 @@
 </template>
 
 <script lang="ts">
-/* eslint-disable @typescript-eslint/no-use-before-define */
-/* eslint-disable @typescript-eslint/camelcase */
 import { computed, defineComponent, reactive, ref, toRef, watch } from '@vue/composition-api'
 
 import PlaybackLimiter from '@/components/PlaybackLimiter.vue'
@@ -165,7 +163,7 @@ import HelpfulButton from '@/components/HelpfulButton.vue'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
-import { useSpotifyRedirect, useSpotifyUser } from '@/auth'
+import { useSpotifyRedirect, useSpotifyUser, SpotifyApi } from '@/auth'
 import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
 import { useVolume } from '@/volume'
@@ -189,7 +187,7 @@ type Settings = {
 
 const isWithin = (v: number, min: number, max: number) => v >= min && v <= max
 
-function usePersistedSettings(defaults: Settings) {
+function usePersistedSettings (defaults: Settings) {
   const prev = sessionStorage.getItem('settings')
   const init = prev ? JSON.parse(prev) : { ...defaults }
   const settings = reactive(init)
@@ -212,9 +210,9 @@ export default defineComponent({
     HelpContent,
     NextUp,
     EditModal,
-    HelpfulButton,
+    HelpfulButton
   },
-  setup(props, { root: { $root, $route } }) {
+  setup (props, { root: { $root, $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
     const playback = ref<SpotifyApi.CurrentPlaybackResponse>()
     const historyItems = ref<TrackWithBPM[]>([])
@@ -228,7 +226,7 @@ export default defineComponent({
       loading: true,
       sent: false,
       track: undefined as TrackWithBPM | undefined,
-      pool: 0,
+      pool: 0
     })
 
     const { settings }: { settings: Settings } = usePersistedSettings({
@@ -241,7 +239,7 @@ export default defineComponent({
       autoClimbEnabled: false,
       autoClimbMin: 120,
       autoClimbMax: 180,
-      autoClimbStep: 5,
+      autoClimbStep: 5
     })
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -253,27 +251,27 @@ export default defineComponent({
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
 
-    function trackFormat(track: TrackWithBPM, showBPM = false): string {
+    function trackFormat (track: TrackWithBPM, showBPM = false): string {
       const prefix = showBPM && track.bpm ? track.bpm.toFixed() + ' bpm - ' : ''
       return `${prefix}${track.artist} - ${track.title}`
     }
 
-    function devOpts() {
+    function devOpts () {
       return state.value?.device?.id ? { device_id: state.value.device.id } : {}
     }
 
-    async function start() {
+    async function start () {
       ready.value = true
     }
 
-    async function update() {
+    async function update () {
       try {
         const res = (await client.getMyCurrentPlayingTrack()) as '' | SpotifyApi.CurrentlyPlayingResponse
         state.value = res === '' ? undefined : res
         playback.value = await client.getMyCurrentPlaybackState()
       } catch (err) {
         console.error(err)
-        if (err.status === 401) reauth() // Authenticated, redirect to loginUrl.
+        if (err && (err as { status: number }).status === 401) reauth() // Authenticated, redirect to loginUrl.
       }
     }
 
@@ -299,7 +297,7 @@ export default defineComponent({
       () => state.value?.item?.id,
       async id => {
         if (id) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-non-null-asserted-optional-chain
           const item = state.value?.item!
           if (settings.autoQueueEnabled && queue.track && queue.track?.id !== id && queue.sent) {
             console.warn(
@@ -327,12 +325,12 @@ export default defineComponent({
           context.value = await client.getPlaylist(id)
 
           // eslint-disable-next-line no-inner-declarations
-          function playlistProgress(i: number, tot: number) {
+          function playlistProgress (i: number, tot: number) {
             queue.loading = `Loading playlist tracks ${i} / ${tot}`
           }
 
           // eslint-disable-next-line no-inner-declarations
-          function trackProgress(i: number, tot: number) {
+          function trackProgress (i: number, tot: number) {
             queue.loading = `Loading track tempo ${i} / ${tot}`
           }
 
@@ -347,7 +345,7 @@ export default defineComponent({
       const max = settings.autoQueueTarget + settings.autoQueueRange
       if (settings.autoClimbEnabled) {
         // If climb is enabled we have already steped up group up
-        return settings.autoClimbMin == min
+        return settings.autoClimbMin === min
           ? isWithin(current.value?.bpm ?? 0, settings.autoClimbMax, settings.autoClimbMax + settings.autoQueueRange)
           : isWithin(current.value?.bpm ?? 0, min - settings.autoClimbStep, max - settings.autoClimbStep)
       } else {
@@ -355,7 +353,7 @@ export default defineComponent({
       }
     })
 
-    function getRandomUnplayed(items: TrackWithBPM[]): TrackWithBPM | undefined {
+    function getRandomUnplayed (items: TrackWithBPM[]): TrackWithBPM | undefined {
       let i = 0
       while (i < 10 && items.length > 0) {
         const seed = Math.round(Math.random() * items.length) % items.length
@@ -392,7 +390,7 @@ export default defineComponent({
       }
     )
 
-    function passed(cpr: SpotifyApi.CurrentlyPlayingResponse, seconds: number) {
+    function passed (cpr: SpotifyApi.CurrentlyPlayingResponse, seconds: number) {
       return (cpr.progress_ms ?? 0) > seconds * 1000
     }
 
@@ -432,7 +430,7 @@ export default defineComponent({
       }
     })
 
-    async function play(context_uri?: string, device?: SpotifyApi.UserDevice) {
+    async function play (context_uri?: string, device?: SpotifyApi.UserDevice) {
       if (context_uri && typeof context_uri === 'string') {
         const dev = device && device.id ? { device_id: device.id } : {}
         await client.play({ context_uri, ...dev })
@@ -444,7 +442,7 @@ export default defineComponent({
       }
     }
 
-    async function playNext() {
+    async function playNext () {
       if (settings.autoQueueEnabled && queue.track && !queue.sent) {
         settings.timeLimitEnabled = false
         settings.autoFadeEnabled = false
@@ -466,21 +464,21 @@ export default defineComponent({
       }
     }
 
-    async function playPrev() {
+    async function playPrev () {
       await client.skipToPrevious(devOpts())
     }
 
-    async function playAgain() {
+    async function playAgain () {
       await client.seek(0, devOpts())
     }
 
-    async function updateVolume(vol: number) {
+    async function updateVolume (vol: number) {
       if (vol !== null && vol !== undefined) {
         await client.setVolume(Math.max(0, Math.min(100, vol)), devOpts())
       }
     }
 
-    async function updateTrackInfo({ id, bpm }: TrackWithBPM) {
+    async function updateTrackInfo ({ id, bpm }: TrackWithBPM) {
       await tracks.updateTrackInfo(id, { bpm } as TrackWithBPM)
       current.value = await tracks.getTrackWithTempo(id)
     }
@@ -497,7 +495,7 @@ export default defineComponent({
       home: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 20),
       pageup: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 5),
       end: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 20),
-      pagedown: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 5),
+      pagedown: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 5)
     })
 
     const { playlists: presets } = usePresets(client, ready)
@@ -529,9 +527,9 @@ export default defineComponent({
       updateVolume,
       updateTrackInfo,
       canEdit: computed(() => !!user.id),
-      presets,
+      presets
     }
-  },
+  }
 })
 </script>
 

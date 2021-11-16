@@ -75,27 +75,27 @@
 import { PlaylistInfo } from '@/presets'
 import { defineComponent, onMounted, onUnmounted, PropType } from '@vue/composition-api'
 import { useInterval } from 'vue-composable'
-
+import { SpotifyApi } from '@/auth'
 export default defineComponent({
   props: {
     devices: {
       type: Array as PropType<SpotifyApi.UserDevice[]>,
-      required: false,
+      required: false
     },
     presets: {
       type: Array as PropType<PlaylistInfo[]>,
       required: false,
-      default: () => [],
-    },
+      default: () => []
+    }
   },
-  setup(props, { emit }) {
+  setup (props, { emit }) {
     const { start, remove } = useInterval(() => emit('devices:reload'), 2000)
 
     onMounted(start)
     onUnmounted(remove)
 
     return {}
-  },
+  }
 })
 </script>
 

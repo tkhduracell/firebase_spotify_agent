@@ -77,9 +77,9 @@ export default defineComponent({
     min: { type: Number, required: true },
     max: { type: Number, required: true },
     step: { type: Number, required: true },
-    limit: { type: Number, required: false },
+    limit: { type: Number, required: false }
   },
-  setup(props) {
+  setup (props) {
     const tracks = computed(() => {
       const mod = (props.max - props.min) % props.step
       return mod === 0 ? (props.max - props.min) / props.step + 1 : Math.ceil((props.max - props.min) / props.step)
@@ -93,9 +93,9 @@ export default defineComponent({
           return Math.round(exact)
         }
         return null
-      }),
+      })
     }
-  },
+  }
 })
 </script>
 

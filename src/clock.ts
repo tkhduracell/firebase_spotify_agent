@@ -1,7 +1,7 @@
 import { computed, onMounted, onUnmounted, ref } from '@vue/composition-api'
 import { useInterval } from 'vue-composable'
 
-export function useClock() {
+export function useClock () {
   const clock = ref(new Date())
 
   const { start, remove } = useInterval(() => (clock.value = new Date()), 1000)

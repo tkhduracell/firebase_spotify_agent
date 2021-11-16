@@ -2,14 +2,14 @@ import { reactive } from '@vue/composition-api'
 
 import SpotifyWebApi from 'spotify-web-api-js'
 
-export function useVolume(client: SpotifyWebApi.SpotifyWebApiJs) {
+export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
   const fading = reactive({
     fadedown: false,
     fadeup: false,
-    volume: 0 as number | null | undefined,
+    volume: 0 as number | null | undefined
   })
 
-  async function startFadeUp(options?: SpotifyApi.DeviceSpecificParameterObject) {
+  async function startFadeUp (options?: SpotifyApi.DeviceSpecificParameterObject) {
     return new Promise<void>(resolve => {
       if (fading.fadedown && !fading.fadeup) {
         const p = fading.volume
@@ -38,7 +38,7 @@ export function useVolume(client: SpotifyWebApi.SpotifyWebApiJs) {
     })
   }
 
-  async function startFadeDown(currentVolume?: number, options?: SpotifyApi.DeviceSpecificParameterObject) {
+  async function startFadeDown (currentVolume?: number, options?: SpotifyApi.DeviceSpecificParameterObject) {
     return new Promise<void>(resolve => {
       if (!fading.fadedown) {
         const p = (fading.volume = currentVolume)

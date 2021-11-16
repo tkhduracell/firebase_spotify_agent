@@ -10,16 +10,16 @@ export class PlaylistDatabase {
   db: LocalDB<string[]>
   tdb: LocalDB<TrackSimple>
 
-  constructor(client: Spotify.SpotifyWebApiJs) {
+  constructor (client: Spotify.SpotifyWebApiJs) {
     this.client = client
     this.db = createLocalDB('pl-trx')
     this.tdb = createLocalDB('t')
   }
 
-  async getPlaylistTracks(id: string, progress?: ProgressFn, requested?: string): Promise<string[]> {
+  async getPlaylistTracks (id: string, progress?: ProgressFn, requested?: string): Promise<string[]> {
     const { snapshot_id: current } = await this.client.getPlaylist(id, {
       fields: 'snapshot_id',
-      market: 'SE',
+      market: 'SE'
     })
 
     if (requested && current !== requested) {
@@ -38,12 +38,12 @@ export class PlaylistDatabase {
     return this.db.getOrCompute(id, () => this.fetchPlaylist(id, progress))
   }
 
-  private async fetchPlaylist(id: string, progress?: ProgressFn): Promise<string[]> {
+  private async fetchPlaylist (id: string, progress?: ProgressFn): Promise<string[]> {
     const timer = new Timer('[playlist] ')
 
     const { items, next, total } = await this.client.getPlaylistTracks(id, {
       fields: 'next,total,items(is_local,track(id,name,artists(name),is_playable))',
-      market: 'SE',
+      market: 'SE'
     })
     let all = items.filter(t => t !== null && !t.is_local && t.track.is_playable).map(i => toSimple(i.track))
 

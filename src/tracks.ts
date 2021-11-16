@@ -1,7 +1,7 @@
 import Spotify from 'spotify-web-api-js'
 import { chunk } from 'lodash'
 import { createLocalDB, LocalDB } from '@/local-db'
-import { collection, FirebaseFirestore, getDoc, getFirestore, setDoc } from '@firebase/firestore'
+import { collection, Firestore, getDoc, getFirestore, setDoc } from '@firebase/firestore'
 import { doc, getDocs } from 'firebase/firestore'
 import { ProgressFn } from './types'
 import { Timer } from './timer'
@@ -10,14 +10,14 @@ import { sleep } from './sleep'
 export type TrackSimple = { title: string; artist: string; id: string }
 export type TrackWithBPM = TrackSimple & { bpm: number }
 
-export function toSimple(track: SpotifyApi.PlaylistTrackObject['track'] | SpotifyApi.PlayHistoryObject['track']): TrackSimple {
+export function toSimple (track: SpotifyApi.PlaylistTrackObject['track'] | SpotifyApi.PlayHistoryObject['track']): TrackSimple {
   const type = track.type ?? 'track'
   if (type === 'track') {
     const { id, name: title, artists } = track as SpotifyApi.TrackObjectSimplified
     return {
       id,
       title,
-      artist: artists.map(s => s.name).join(', '),
+      artist: artists.map(s => s.name).join(', ')
     }
   } else {
     const { id, name: title } = track as SpotifyApi.EpisodeObjectSimplified
@@ -25,7 +25,7 @@ export function toSimple(track: SpotifyApi.PlaylistTrackObject['track'] | Spotif
   }
 }
 
-function trackDoc(f: FirebaseFirestore, id: string) {
+function trackDoc (f: Firestore, id: string) {
   return doc(
     f,
     'spotify-agent',
@@ -37,22 +37,22 @@ function trackDoc(f: FirebaseFirestore, id: string) {
       .join('')}`
   )
 }
-function tracksCol(f: FirebaseFirestore) {
+function tracksCol (f: Firestore) {
   return collection(f, 'spotify-agent', 'tracks', 'corrections')
 }
 
 export class TrackDatabase {
   client: Spotify.SpotifyWebApiJs
   db: LocalDB<TrackWithBPM>
-  firestore: FirebaseFirestore
+  firestore: Firestore
 
-  constructor(client: Spotify.SpotifyWebApiJs) {
+  constructor (client: Spotify.SpotifyWebApiJs) {
     this.client = client
     this.db = createLocalDB('t')
     this.firestore = getFirestore()
   }
 
-  private async getTempo(id: string): Promise<number> {
+  private async getTempo (id: string): Promise<number> {
     const override = await getDoc(trackDoc(this.firestore, id))
     if (override.exists()) {
       const data = override.data()
@@ -71,7 +71,7 @@ export class TrackDatabase {
     return bpm
   }
 
-  async getTrackWithTempo(id: string): Promise<TrackWithBPM> {
+  async getTrackWithTempo (id: string): Promise<TrackWithBPM> {
     const track = await this.db.getOrCompute(id, async () => {
       const track = await this.client.getTrack(id)
       return { ...toSimple(track), bpm: await this.getTempo(id) }
@@ -85,7 +85,7 @@ export class TrackDatabase {
     return track
   }
 
-  async getTracksWithTempo(tracks: string[], progress?: ProgressFn): Promise<TrackWithBPM[]> {
+  async getTracksWithTempo (tracks: string[], progress?: ProgressFn): Promise<TrackWithBPM[]> {
     const store: Record<string, TrackWithBPM> = {}
 
     let i = 0
@@ -140,7 +140,7 @@ export class TrackDatabase {
     return tracks.filter(id => !!(id in store)).map(id => store[id])
   }
 
-  async updateTrackInfo(id: string, data: TrackWithBPM) {
+  async updateTrackInfo (id: string, data: TrackWithBPM) {
     console.log('[db] Updating', id, 'with', data)
     await setDoc(trackDoc(this.firestore, id), { [id]: data }, { merge: true })
     if (this.db.has(id)) {
@@ -148,7 +148,7 @@ export class TrackDatabase {
     }
   }
 
-  async patchTracks() {
+  async patchTracks () {
     const timer = new Timer('[tracks] ')
     const res = await getDocs(tracksCol(this.firestore))
     let count = 0

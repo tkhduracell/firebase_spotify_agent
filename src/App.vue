@@ -44,6 +44,7 @@
       <div class="d-none d-md-inline-block d-lg-none">MD</div>
       <div class="d-none d-lg-inline-block d-xl-none">LG</div>
       <div class="d-none d-xl-inline-block">XL</div>
+      <div class="d-inline-block ml-1" v-if="isWakeLockActive">- Wakelock</div>
     </footer>
     <b-modal id="signin" title="Sign In" @ok="doSignIn">
       <b-row class="my-1">
@@ -70,31 +71,40 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive } from '@vue/composition-api'
+import { defineComponent, onMounted, onUnmounted, reactive } from '@vue/composition-api'
 import { signIn, useUser } from '@/firebase'
 import { useSpotifyUser } from './auth'
+import { useWakeLock } from '@vueuse/core'
+
 export default defineComponent({
   name: 'App',
   metaInfo: {
     title: 'Spotify Agent',
-    link: [{ rel: 'icon favicon', type: 'image/svg', href: 'favicon.svg' }],
+    link: [{ rel: 'icon favicon', type: 'image/svg', href: 'favicon.svg' }]
   },
-  setup() {
+  setup () {
     const { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME } = process.env
     const form = reactive({ user: '', pass: '' })
     const spotifyUser = useSpotifyUser()
     const user = useUser()
+
+    const { isSupported, request, release, isActive: isWakeLockActive } = useWakeLock()
+    if (isSupported) {
+      onMounted(() => request('screen'))
+      onUnmounted(() => release())
+    }
 
     return {
       env: { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME },
       form,
       user,
       spotifyUser,
-      doSignIn() {
+      isWakeLockActive,
+      doSignIn () {
         signIn(form.user, form.pass)
-      },
+      }
     }
-  },
+  }
 })
 </script>
 <style lang="scss" scoped>

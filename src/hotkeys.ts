@@ -4,8 +4,8 @@ export type KeyMap = {
   [key: string]: () => void | Promise<void>
 }
 
-export function useHotKeys($root: Vue, keys: KeyMap) {
-  function onKeyPress(e: Event) {
+export function useHotKeys ($root: Vue, keys: KeyMap) {
+  function onKeyPress (e: Event) {
     if (e.target instanceof Element && e.target.id === 'input-tempo') return
     if (e instanceof KeyboardEvent) {
       console.log(e.code.toLowerCase())

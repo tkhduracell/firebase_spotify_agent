@@ -20,8 +20,8 @@ export default defineComponent({
     header: { type: String, required: false, default: () => 'Spelar från' },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    img: { type: String, required: true },
-  },
+    img: { type: String, required: true }
+  }
 })
 </script>
 

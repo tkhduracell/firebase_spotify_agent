@@ -50,13 +50,13 @@ export default defineComponent({
   props: {
     value: { type: Number, required: true },
     progress: { type: Number, required: true },
-    enabled: { type: Boolean, required: true },
+    enabled: { type: Boolean, required: true }
   },
-  setup() {
+  setup () {
     return {
-      fixed: [30, 60, 90, 120, 150, 200],
+      fixed: [30, 60, 90, 120, 150, 200]
     }
-  },
+  }
 })
 </script>
 

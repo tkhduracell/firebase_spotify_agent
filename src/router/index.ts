@@ -8,46 +8,46 @@ const routes: Array<RouteConfig> = [
   {
     path: '/',
     name: 'Home',
-    component: Home,
+    component: Home
   },
   {
     path: '/about',
     name: 'About',
-    component: () => import(/* webpackChunkName: "about" */ '../views/About.vue'),
+    component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
   },
   {
     path: '/recommendations',
     name: 'Recommendations',
-    component: () => import(/* webpackChunkName: "recommendations" */ '../views/Recommendations.vue'),
+    component: () => import(/* webpackChunkName: "recommendations" */ '../views/Recommendations.vue')
   },
   {
     path: '/playlist',
     name: 'PlaylistInspect',
-    component: () => import(/* webpackChunkName: "playlist-inspect" */ '../views/PlaylistInspect.vue'),
+    component: () => import(/* webpackChunkName: "playlist-inspect" */ '../views/PlaylistInspect.vue')
   },
   {
     path: '/create',
     name: 'PlaylistCreate',
-    component: () => import(/* webpackChunkName: "playlist-create" */ '../views/PlaylistCreate.vue'),
+    component: () => import(/* webpackChunkName: "playlist-create" */ '../views/PlaylistCreate.vue')
   },
   {
     path: '/logout',
-    beforeEnter() {
+    beforeEnter () {
       window.location = ('https://accounts.spotify.com/en/logout' as unknown) as Location
-    },
+    }
   },
   {
     path: '/status',
-    beforeEnter() {
+    beforeEnter () {
       window.location = ('https://accounts.spotify.com/sv/status' as unknown) as Location
-    },
-  },
+    }
+  }
 ]
 
 const router = new VueRouter({
   mode: 'history',
   base: process.env.BASE_URL,
-  routes,
+  routes
 })
 
 export default router

@@ -17,7 +17,7 @@ import { defineComponent } from '@vue/composition-api'
 export default defineComponent({
   props: {
     disabled: { type: Boolean },
-    help: { type: String, default: () => 'Next song is about to play' },
-  },
+    help: { type: String, default: () => 'Next song is about to play' }
+  }
 })
 </script>

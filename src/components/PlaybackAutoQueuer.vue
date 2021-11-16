@@ -51,8 +51,8 @@ export default defineComponent({
   props: {
     enabled: { type: Boolean, required: true },
     target: { type: Number, required: true },
-    range: { type: Number, required: true },
-  },
+    range: { type: Number, required: true }
+  }
 })
 </script>
 
