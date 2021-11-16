@@ -7,7 +7,7 @@ const commitHash = require('child_process')
 
 module.exports = {
   devServer: {
-    headers: {},
+    headers: {}
   },
 
   chainWebpack: config => {
@@ -22,5 +22,5 @@ module.exports = {
       envs.BUILD_TIME = '"' + moment().format('YYYY-MM-DD HH:mm:SS') + '"'
       return args
     })
-  },
+  }
 }
