@@ -110,7 +110,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 footer {
   text-align: right;
-  position: fixed;
+  position: absolute;
   top: 6em;
   width: 100%;
   font-size: 0.6em;
