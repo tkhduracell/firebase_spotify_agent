@@ -1,3 +1,4 @@
+import SpotifyWebApi from 'spotify-web-api-js'
 import { TrackWithBPM } from './tracks'
 
 export type QueueState = {
@@ -8,3 +9,5 @@ export type QueueState = {
 }
 
 export type ProgressFn = (i: number, tot: number) => void
+export type SpotifyApi = SpotifyWebApi.SpotifyWebApiJs
+export const SpotifyApi = SpotifyWebApi

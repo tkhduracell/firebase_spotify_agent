@@ -75,7 +75,7 @@
 import { PlaylistInfo } from '@/presets'
 import { defineComponent, onMounted, onUnmounted, PropType } from '@vue/composition-api'
 import { useInterval } from 'vue-composable'
-import { SpotifyApi } from '@/auth'
+import { SpotifyApi } from '@/types'
 export default defineComponent({
   props: {
     devices: {

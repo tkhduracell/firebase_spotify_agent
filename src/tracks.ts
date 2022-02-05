@@ -10,6 +10,11 @@ import { sleep } from './sleep'
 export type TrackSimple = { title: string; artist: string; id: string }
 export type TrackWithBPM = TrackSimple & { bpm: number }
 
+export function trackFormat (track: TrackWithBPM, showBPM = false): string {
+  const prefix = showBPM && track.bpm ? track.bpm.toFixed() + ' bpm - ' : ''
+  return `${prefix}${track.artist} - ${track.title}`
+}
+
 export function toSimple (track: SpotifyApi.PlaylistTrackObject['track'] | SpotifyApi.PlayHistoryObject['track']): TrackSimple {
   const type = track.type ?? 'track'
   if (type === 'track') {
@@ -141,7 +146,7 @@ export class TrackDatabase {
   }
 
   async updateTrackInfo (id: string, data: TrackWithBPM) {
-    console.log('[db] Updating', id, 'with', data)
+    console.debug('[db] Updating', id, 'with', data)
     await setDoc(trackDoc(this.firestore, id), { [id]: data }, { merge: true })
     if (this.db.has(id)) {
       this.db.set(id, { ...this.db.get(id), ...data })

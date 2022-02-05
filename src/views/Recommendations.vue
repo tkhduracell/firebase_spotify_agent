@@ -53,14 +53,17 @@
 <script lang="ts">
 import { defineComponent, ref, watch } from '@vue/composition-api'
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
-import { useSpotifyRedirect, SpotifyApi } from '@/auth'
+import { useSpotifyAuth, useSpotifyClient } from '@/auth'
+import { SpotifyApi } from '@/types'
+import { usePlaybackState } from '@/playing'
 
 export default defineComponent({
   name: 'Recommendation',
   components: {},
-  setup (props, { root: { $route } }) {
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client } = useSpotifyRedirect($route, onReady)
+  setup (props, { root: { $router } }) {
+    const { client } = useSpotifyClient()
+    const { reauth } = useSpotifyAuth($router.currentRoute, false)
+    const { playback } = usePlaybackState(client, reauth, 5000)
 
     const db = new TrackDatabase(client)
 
@@ -148,6 +151,8 @@ export default defineComponent({
       tracks,
       tempo,
       play,
+
+      playback,
 
       options_tracks,
       options_artists,

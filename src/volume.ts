@@ -14,7 +14,7 @@ export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
       if (fading.fadedown && !fading.fadeup) {
         const p = fading.volume
         if (p) {
-          console.log('[Fade] Starting to fade up from 0 ->', p)
+          console.debug('[Fade] Starting to fade up from 0 ->', p)
           for (let i = 1; i < 9; i++) {
             setTimeout(() => client.setVolume(Math.round(p * (i / 10) + 0.1), options), (i - 1) * 300)
           }
@@ -43,7 +43,7 @@ export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
       if (!fading.fadedown) {
         const p = (fading.volume = currentVolume)
         if (p) {
-          console.log('[Fade] Starting to fade down from', p, '->', 0)
+          console.debug('[Fade] Starting to fade down from', p, '->', 0)
           for (let i = 1; i < 9; i++) {
             setTimeout(() => client.setVolume(Math.round(p * (1 - i / 10)), options), (i - 1) * 300)
           }

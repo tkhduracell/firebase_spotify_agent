@@ -41,6 +41,11 @@ const routes: Array<RouteConfig> = [
     beforeEnter () {
       window.location = ('https://accounts.spotify.com/sv/status' as unknown) as Location
     }
+  },
+  {
+    path: '/test',
+    name: 'Test',
+    component: () => import(/* webpackChunkName: "test" */ '../views/Test.vue')
   }
 ]
 

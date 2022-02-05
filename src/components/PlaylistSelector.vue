@@ -30,7 +30,7 @@ import { computed, defineComponent, PropType } from '@vue/composition-api'
 import { minBy } from 'lodash'
 import PlaylistBadge from '@/components/PlaylistBadge.vue'
 import { PlaylistInfo } from '@/presets'
-import { SpotifyApi } from '@/auth'
+import { SpotifyApi } from '@/types'
 
 export default defineComponent({
   components: { PlaylistBadge },
@@ -65,7 +65,7 @@ $bg: rgba(#252525, 1);
   position: relative;
 
   height: 64px;
-  z-index: 10000;
+  z-index: 1000;
 
   cursor: pointer;
 

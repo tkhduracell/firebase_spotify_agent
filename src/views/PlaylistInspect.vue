@@ -31,43 +31,41 @@
         <div v-if="playlist.tracks.length > 0">
           <div v-for="(t, idx) in playlist.tracks" :key="idx + t.id">
             <div class="row">
-              <b-link @click="play(t)" v-text="trackFormat(t, true)" class="col-12 text-truncate" />
+              <b-link @click="play(t)" class="col-12 text-truncate" >
+                {{ trackFormat(t, true) }} <b-icon-play v-if="state && state.item && t.id == state.item.id" />
+              </b-link>
             </div>
           </div>
         </div>
       </b-col>
       <b-col order="0" cols="12" sm="8" offset-sm="2" md="8" offset-md="2" lg="6" order-lg="2" offset-lg="0" xl="4" class="">
         <h2>Tracks per tempo</h2>
-        <Chart :options="playlist.chartoptions" :chartData="playlist.chart" />
+        <BarChart v-bind="barChartProps" />
       </b-col>
     </b-row>
   </b-container>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, ref } from '@vue/composition-api'
+import { computed, defineComponent, reactive, ref, watch } from '@vue/composition-api'
 
-import { TrackWithBPM, TrackDatabase } from '@/tracks'
-import { useSpotifyRedirect } from '@/auth'
+import { TrackWithBPM, TrackDatabase, trackFormat } from '@/tracks'
+
 import { PlaylistDatabase } from '@/playlists'
 
 import { asyncComputed } from '@vueuse/core'
 import { sortBy, groupBy, range, max, min } from 'lodash'
-import Chart from '@/components/Chart.vue'
+import { BarChart, useBarChart } from 'vue-chart-3'
+import { useSpotifyAuth, useSpotifyClient } from '@/auth'
+import { usePlaybackState } from '@/playing'
 
 export default defineComponent({
   name: 'PlaylistInspect',
-  components: { Chart },
+  components: { BarChart },
   setup (props, { root: { $route } }) {
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client } = useSpotifyRedirect($route, onReady)
-
-    function trackFormat (track: TrackWithBPM, showBPM = false): string {
-      // eslint-disable-next-line no-debugger
-      if (typeof track.bpm !== 'number') debugger
-      const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
-      return `${prefix}${track.artist} - ${track.title}`
-    }
+    const { reauth } = useSpotifyAuth($route, false)
+    const { client } = useSpotifyClient()
+    const { state } = usePlaybackState(client, reauth)
 
     const tracks = new TrackDatabase(client)
     const playlists = new PlaylistDatabase(client)
@@ -118,7 +116,7 @@ export default defineComponent({
       )
       return buckets
     })
-    const playlistTempoChart = computed(() => {
+    const chartData = computed(() => {
       return {
         labels: playlistTempoHistorgram.value.map(kv => kv[0]),
         datasets: [
@@ -162,6 +160,36 @@ export default defineComponent({
       }
     })
 
+    const options = {
+      legend: { display: false },
+      scales: {
+        gridLines: {
+          display: false
+        },
+        yAxes: [
+          {
+            gridLines: {
+              color: 'rgba(255, 255, 255, 0.2)'
+            },
+            ticks: {
+              fontColor: 'rgba(255, 255, 255, 0.9)'
+            }
+          }
+        ],
+        xAxes: [
+          {
+            gridLines: {
+              color: 'rgba(255, 255, 255, 0.2)'
+            },
+            ticks: {
+              fontColor: 'rgba(255, 255, 255, 0.9)'
+            }
+          }
+        ]
+      }
+    }
+    const { barChartProps } = useBarChart({ chartData, options })
+
     async function play (track: TrackWithBPM) {
       await client.queue('spotify:track:' + track.id)
       setTimeout(async () => {
@@ -169,16 +197,16 @@ export default defineComponent({
       }, 500)
     }
 
-    async function onReady () {
-      const state = await client.getMyCurrentPlaybackState()
-      if (state.context?.type === 'playlist') {
-        playlistUrl.value = state.context.external_urls?.spotify ?? ''
+    watch(state, (s) => {
+      if (s && s.context?.type === 'playlist') {
+        playlistUrl.value = s.context.external_urls?.spotify ?? ''
       }
-    }
+    })
 
     return {
       tracks,
       play,
+      state,
       loading: reactive({
         info: loadingInfo,
         tracks: loadingTracks
@@ -187,39 +215,11 @@ export default defineComponent({
         url: playlistUrl,
         id: playlistId,
         tracks: playlistTracks,
-        info: playlistInfo,
-        chart: playlistTempoChart,
-        chartoptions: {
-          legend: { display: false },
-          scales: {
-            gridLines: {
-              display: false
-            },
-            yAxes: [
-              {
-                gridLines: {
-                  color: 'rgba(255, 255, 255, 0.2)'
-                },
-                ticks: {
-                  fontColor: 'rgba(255, 255, 255, 0.9)'
-                }
-              }
-            ],
-            xAxes: [
-              {
-                gridLines: {
-                  color: 'rgba(255, 255, 255, 0.2)'
-                },
-                ticks: {
-                  fontColor: 'rgba(255, 255, 255, 0.9)'
-                }
-              }
-            ]
-          }
-        }
+        info: playlistInfo
       }),
       trackFormat,
-      sorted
+      sorted,
+      barChartProps
     }
   }
 })

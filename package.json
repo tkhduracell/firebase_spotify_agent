@@ -16,31 +16,33 @@
     "firebase": "^9.4.1",
     "lodash": "^4.17.21",
     "spotify-web-api-js": "^1.5.2",
+    "spotify-web-playback-ts": "^0.0.2",
     "vue": "^2.6.14",
-    "vue-chartjs": "^3.5.1",
+    "vue-chart-3": "^2.1.0",
     "vue-composable": "1.0.0-beta.13",
     "vue-meta": "^2.4.0",
     "vue-router": "^3.5.3"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.177",
-    "@vue/cli-service": "~4.5.15",
-    "moment": "^2.29.1",
-    "prettier": "^2.4.1",
     "@typescript-eslint/eslint-plugin": "^4.18.0",
     "@typescript-eslint/parser": "^4.18.0",
     "@vue/cli-plugin-babel": "~4.5.0",
     "@vue/cli-plugin-eslint": "~4.5.0",
     "@vue/cli-plugin-router": "~4.5.0",
     "@vue/cli-plugin-typescript": "~4.5.0",
+    "@vue/cli-service": "~4.5.15",
     "@vue/eslint-config-standard": "^5.1.2",
     "@vue/eslint-config-typescript": "^7.0.0",
     "eslint": "^6.7.2",
     "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-jest": "25.7.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.0",
     "eslint-plugin-vue": "^6.2.2",
+    "moment": "^2.29.1",
+    "prettier": "^2.4.1",
     "sass": "^1.26.5",
     "sass-loader": "^8.0.2",
     "typescript": "~4.4.4",
@@ -62,7 +64,8 @@
     "rules": {
       "camelcase": "off",
       "@typescript-eslint/explicit-module-boundary-types": "off"
-    }
+    },
+    "ignorePatterns": "node_modeuls/**/*.*"
   },
   "browserslist": [
     "> 1%",

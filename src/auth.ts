@@ -1,74 +1,82 @@
-import { onMounted, onUnmounted, reactive } from '@vue/composition-api'
-import { createGlobalState } from '@vueuse/core'
-import SpotifyWebApi from 'spotify-web-api-js'
-import { useInterval } from 'vue-composable'
+import { SpotifyApi } from './types'
+import { useSpotifyState } from './state'
+import { onMounted, watch } from '@vue/composition-api'
 import { Route } from 'vue-router'
 
-export function useSpotifyRedirect (
+export function useSpotifyAuth (
   $route: Route,
-  onInit?: () => unknown,
-  onRefresh?: () => unknown,
-  scopes = ['user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing', 'user-read-recently-played']
+  watchProfile = false,
+  scopes = [
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+    'user-read-recently-played',
+    'playlist-read-collaborative',
+    'playlist-read-private',
+    'playlist-modify-private',
+    'streaming'
+  ]
 ) {
-  const client = new SpotifyWebApi()
-
-  const location = document.location
-  const url = new URL('https://accounts.spotify.com/authorize')
-  // url.searchParams.append('client_id', '0b2b46c7f3a04217bc9e3ee9f7053d7a') new
-  url.searchParams.append('client_id', '2c23b47cf7274b24b1a34382a32ac94b')
-  url.searchParams.append('response_type', 'token')
-  url.searchParams.append(
-    'redirect_uri',
-    `${location.protocol}//${location.hostname}${location.port ? ':' + location.port : ''}${location.pathname}`
-  )
-  url.searchParams.append('scope', scopes.join(','))
-  const authUrl = (url.toString() as unknown) as Location
-
-  const { start, remove } = useInterval(onRefresh ? () => onRefresh() : () => null, 1000)
-
-  onUnmounted(remove)
+  const authUrl = createAuthUrl(document.location, scopes)
+  const state = useSpotifyState()
 
   onMounted(async () => {
-    if ($route.hash.includes('access_token')) {
-      const params = new URLSearchParams($route.hash.replace(/^#/gim, ''))
-      const token = params.get('access_token')
-      client.setAccessToken(token)
-
-      if (onInit) {
-        await onInit()
-      }
-    } else {
-      document.location = authUrl
+    if (state.token) return
+    const token = getToken($route.hash)
+    if (!token) {
+      reauth()
     }
-    start()
+    state.token = token ?? ''
   })
 
   function reauth () {
     document.location = authUrl
   }
 
-  return { client, reauth }
-}
-
-const spotifyUser = createGlobalState(() =>
-  reactive({
-    id: '',
-    name: ''
-  })
-)
-
-export function useSpotifyUser (client?: SpotifyWebApi.SpotifyWebApiJs) {
-  const state = spotifyUser()
-
-  if (client) {
-    onMounted(async () => {
-      const u = await client.getMe()
-      state.name = u.display_name ?? ''
-      state.id = u.id
+  if (watchProfile) {
+    watch(() => state.token, async (t) => {
+      const client = new SpotifyApi()
+      client.setAccessToken(t)
+      const { display_name, id } = await client.getMe()
+      state.id = id ?? ''
+      state.name = display_name ?? ''
     })
   }
 
-  return state
+  return { reauth }
 }
 
-export type SpotifyApi = SpotifyWebApi.SpotifyWebApiJs
+export function useSpotifyClient () {
+  const client = new SpotifyApi()
+  const state = useSpotifyState()
+
+  watch(() => state.token, (t) => {
+    if (t) {
+      console.log('setting token!')
+      client.setAccessToken(t)
+    }
+  })
+
+  return { client }
+}
+
+function createAuthUrl (to: Location, scopes: string[]) {
+  const url = new URL('https://accounts.spotify.com/authorize')
+  url.searchParams.append('client_id', '2c23b47cf7274b24b1a34382a32ac94b')
+  url.searchParams.append('response_type', 'token')
+  url.searchParams.append(
+    'redirect_uri',
+    `${to.protocol}//${to.hostname}${to.port ? ':' + to.port : ''}${to.pathname}`
+  )
+  url.searchParams.append('scope', scopes.join(','))
+  return (url.toString() as unknown) as Location
+}
+
+function getToken (hash: string): string | null {
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.replace(/^#/gim, ''))
+    return params.get('access_token')
+  } else {
+    return null
+  }
+}

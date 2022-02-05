@@ -1,5 +1,5 @@
-import { onMounted, onUnmounted, reactive } from '@vue/composition-api'
-import { createGlobalState } from '@vueuse/core'
+import { useUserState } from './state'
+import { onMounted, onUnmounted } from '@vue/composition-api'
 import { initializeApp } from 'firebase/app'
 
 import { getAuth, signInWithEmailAndPassword, Unsubscribe } from 'firebase/auth'
@@ -24,15 +24,9 @@ export function signIn (user: string, pass: string) {
 }
 export const firestore = getFirestore()
 
-const useGlobalAuth = createGlobalState(() =>
-  reactive({
-    id: '',
-    name: ''
-  })
-)
+export function useFirebaseUser () {
+  const state = useUserState()
 
-export function useUser () {
-  const state = useGlobalAuth()
   let unsubcribe: Unsubscribe
   onMounted(() => {
     unsubcribe = auth.onAuthStateChanged(update => {
@@ -48,6 +42,4 @@ export function useUser () {
       unsubcribe()
     }
   })
-
-  return state
 }

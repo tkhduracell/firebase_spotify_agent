@@ -58,7 +58,7 @@
       </b-col>
       <b-col class="label last" cols="auto">step </b-col>
     </b-row>
-    <b-row align-content="right">
+    <b-row>
       <b-col class="label main"></b-col>
       <b-col class="pl-0" v-if="minutes">One cycle takes {{ minutes }} minutes over {{ tracks }} tracks.</b-col>
       <b-col class="pl-0" v-else>One cycle over {{ tracks }} tracks.</b-col>

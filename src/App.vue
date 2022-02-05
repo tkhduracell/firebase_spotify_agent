@@ -21,14 +21,14 @@
 
         <!-- Right aligned nav items -->
         <b-navbar-nav class="ml-auto">
-          <b-nav-item href="/status">{{ spotifyUser.name }}</b-nav-item>
+          <b-nav-item href="/status">{{ spotifyState.name }}</b-nav-item>
           <b-nav-item href="/logout">Logout</b-nav-item>
         </b-navbar-nav>
       </b-collapse>
     </b-navbar>
     <router-view class="mt-4" />
     <footer>
-      <b-link v-b-modal.signin v-if="!user.id" class="ml-1">
+      <b-link v-b-modal="'signin'" v-if="!userState.id" class="ml-1">
         <b-icon-lock-fill />
       </b-link>
       Version
@@ -46,35 +46,17 @@
       <div class="d-none d-xl-inline-block">XL</div>
       <div class="d-inline-block ml-1" v-if="isWakeLockActive">- Wakelock</div>
     </footer>
-    <b-modal id="signin" title="Sign In" @ok="doSignIn">
-      <b-row class="my-1">
-        <b-col cols="12" class="mb-3">
-          As an admin you can help keeping the track database up-to date. If you are intrested in don't hesitate to contact me.
-        </b-col>
-        <b-col sm="2">
-          <label for="input-email">Email:</label>
-        </b-col>
-        <b-col sm="10">
-          <b-form-input v-model="form.user" id="input-email" size="sm" placeholder="Enter your email" />
-        </b-col>
-      </b-row>
-      <b-row class="my-1">
-        <b-col sm="2">
-          <label for="input-password">Password:</label>
-        </b-col>
-        <b-col sm="10">
-          <b-form-input v-model="form.pass" id="input-password" size="sm" placeholder="Enter your password" type="password" />
-        </b-col>
-      </b-row>
-    </b-modal>
+    <LoginForm />
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, onUnmounted, reactive } from '@vue/composition-api'
-import { signIn, useUser } from '@/firebase'
-import { useSpotifyUser } from './auth'
+import { defineComponent, onMounted, onUnmounted } from '@vue/composition-api'
+import { useSpotifyAuth } from './auth'
 import { useWakeLock } from '@vueuse/core'
+import { useUserState, useSpotifyState } from './state'
+import { usePlayerReady } from './player'
+import LoginForm from './components/LoginForm.vue'
 
 export default defineComponent({
   name: 'App',
@@ -82,29 +64,37 @@ export default defineComponent({
     title: 'Spotify Agent',
     link: [{ rel: 'icon favicon', type: 'image/svg', href: 'favicon.svg' }]
   },
-  setup () {
+  setup (props, { root: { $el, $router } }) {
     const { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME } = process.env
-    const form = reactive({ user: '', pass: '' })
-    const spotifyUser = useSpotifyUser()
-    const user = useUser()
+    useSpotifyAuth($router.currentRoute, true)
+
+    const spotifyState = useSpotifyState()
+    const userState = useUserState()
+
+    usePlayerReady($el)
 
     const { isSupported, request, release, isActive: isWakeLockActive } = useWakeLock()
     if (isSupported) {
-      onMounted(() => request('screen'))
+      onMounted(() => {
+        if (isSupported) {
+          try {
+            request('screen')
+          } catch (e) {
+            console.debug('Unable to aquire wakelock')
+          }
+        }
+      })
       onUnmounted(() => release())
     }
 
     return {
       env: { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME },
-      form,
-      user,
-      spotifyUser,
-      isWakeLockActive,
-      doSignIn () {
-        signIn(form.user, form.pass)
-      }
+      userState,
+      spotifyState,
+      isWakeLockActive
     }
-  }
+  },
+  components: { LoginForm }
 })
 </script>
 <style lang="scss" scoped>

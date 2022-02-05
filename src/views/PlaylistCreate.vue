@@ -58,17 +58,17 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, computed, Ref } from '@vue/composition-api'
+import { defineComponent, reactive, computed, Ref, watch } from '@vue/composition-api'
 
-import { TrackWithBPM, TrackDatabase } from '@/tracks'
-import { useSpotifyRedirect, SpotifyApi } from '@/auth'
+import { TrackWithBPM, TrackDatabase, trackFormat } from '@/tracks'
+import { useSpotifyAuth, useSpotifyClient } from '@/auth'
 import { PlaylistDatabase } from '@/playlists'
 import { createLocalDB, VERSION } from '@/local-db'
-
+import { SpotifyApi } from '@/types'
 import { asyncComputed, useStorage } from '@vueuse/core'
-import Chart from '@/components/Chart.vue'
 
 import { uniq, sortBy, flatten, uniqBy, chunk, groupBy, filter, fromPairs } from 'lodash'
+import { usePlaybackState } from '@/playing'
 
 function id (url: string): string {
   return url.replace(/https:\/\/open\.spotify\.com\/playlist\/(\w{20,24})(\?.+)?/i, '$1')
@@ -76,57 +76,28 @@ function id (url: string): string {
 function clean (url: string): string {
   return url.replace(/(https:\/\/open\.spotify\.com\/playlist\/\w{20,24})(\?.+)?/i, '$1')
 }
-function isError (obj: unknown, code: number) {
-  if (obj && typeof obj === 'object') {
-    const x = obj as { status: number }
-    if (x.status === code) {
-      return true
-    }
-  }
-  return false
-}
 
 export default defineComponent({
   name: 'PlaylistCreate',
-  components: { Chart },
-  setup (props, { root: { $route } }) {
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client, reauth } = useSpotifyRedirect($route, onReady, () => '', [
-      'user-read-playback-state',
-      'user-modify-playback-state',
-      'user-read-currently-playing',
-      'playlist-read-collaborative',
-      'playlist-read-private',
-      'playlist-modify-private'
-    ])
-
-    function trackFormat (track: TrackWithBPM, showBPM = false): string {
-      const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
-      return `${prefix}${track.artist} - ${track.title}`
-    }
-
-    const tracksDB = new TrackDatabase(client)
-    const playlistsDB = new PlaylistDatabase(client)
-
+  setup (props, { root: { $router } }) {
     const form = useStorage(VERSION + ':pl-urls', {
       urls: [{ value: '' }] as { value: string }[]
     }) as unknown as Ref<{ urls: { value: string }[] }>
 
-    async function onReady () {
-      try {
-        const state = await client.getMyCurrentPlaybackState()
-        if (state.context?.type === 'playlist') {
-          if (!form.value.urls[0].value) {
-            form.value.urls[0].value = state.context.external_urls?.spotify ?? ''
-          }
-        }
-        form.value = { ...form.value }
-      } catch (error) {
-        if (isError(error, 401)) {
-          reauth()
+    const { reauth } = useSpotifyAuth($router.currentRoute, false)
+    const { client } = useSpotifyClient()
+    const { state } = usePlaybackState(client, reauth, 5000)
+
+    const tracksDB = new TrackDatabase(client)
+    const playlistsDB = new PlaylistDatabase(client)
+
+    watch(() => state.value?.context, ctx => {
+      if (ctx && ctx.type === 'playlist') {
+        if (!form.value.urls[0].value) {
+          form.value.urls[0].value = ctx.external_urls?.spotify ?? ''
         }
       }
-    }
+    })
 
     const playlistInfo = createLocalDB<SpotifyApi.SinglePlaylistResponse>('pl-meta')
 

@@ -7,7 +7,7 @@
           <div class="clearfix">
             <h1 v-if="current">
               {{ trackFormat(current) }}
-              <div v-b-modal.trackedit class="d-inline-block" v-if="canEdit">
+              <div v-b-modal="'trackedit'" class="d-inline-block" v-if="canEdit">
                 <b-icon-pencil-fill scale="0.5" />
               </div>
             </h1>
@@ -18,7 +18,11 @@
               <PlaylistSelector :context="context" v-if="context" @play="play($event)" />
             </b-col>
             <b-col cols="auto">
-              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playAgain">
+              <HelpfulButton class="d-inline-block" :disabled="queue.sent" v-b-modal="'select-track'">
+                <b-icon-search scale="2.0" class="mt-4 mb-4" />
+              </HelpfulButton>
+
+              <HelpfulButton class="d-inline-block mr-4" :disabled="queue.sent" @click="playAgain">
                 <b-icon-arrow-counterclockwise scale="2.0" class="mt-4 mb-4" />
               </HelpfulButton>
 
@@ -38,12 +42,12 @@
               </HelpfulButton>
             </b-col>
             <b-col cols="auto"
-              ><span class="seconds-left"> {{ seconds.toFixed() }} / {{ secondsMax.toFixed() }} seconds </span>
+              ><span class="seconds-left"> {{ secondsPlayed.toFixed() }} / {{ secondsMax.toFixed() }} seconds </span>
             </b-col>
           </b-row>
 
           <b-progress height="2rem" :max="secondsMax" class="mb-3 seconds">
-            <b-progress-bar :value="seconds" :label="progressLabel"></b-progress-bar>
+            <b-progress-bar :value="secondsPlayed" :label="progressLabel"></b-progress-bar>
           </b-progress>
         </div>
 
@@ -53,7 +57,7 @@
             @update:enabled="settings.timeLimitEnabled = $event"
             :value="settings.timeLimitSeconds"
             @update:value="settings.timeLimitSeconds = $event"
-            :progress="seconds"
+            :progress="secondsPlayed"
             class="mb-2"
           />
           <PlaybackAutoFade
@@ -98,7 +102,7 @@
             </b-row>
           </b-col>
           <b-col cols="6">
-            <b class="d-block">Last {{ historyItems.length }} played items</b>
+            <b class="d-block">Last played</b>
             <div v-for="(l, idx) in historyItems" :key="'h-' + l.id + '-' + idx" v-text="trackFormat(l, true)" />
             <div v-if="historyItems.length === 0">
               None so far...
@@ -145,6 +149,7 @@
 
     <div class="clock">{{ hhmm }}</div>
     <EditModal v-if="current" :track="current" @update:track="updateTrackInfo" @skip:track="playNext" />
+    <SelectSongModal :playlist="playlist" @play="playTrack" />
   </b-container>
 </template>
 
@@ -159,18 +164,20 @@ import PlaylistSelector from '@/components/PlaylistSelector.vue'
 import HelpContent from '@/components/HelpContent.vue'
 import NextUp from '@/components/NextUp.vue'
 import EditModal from '@/components/EditModal.vue'
+import SelectSongModal from '@/components/SelectSongModal.vue'
 import HelpfulButton from '@/components/HelpfulButton.vue'
 
-import { TrackWithBPM, TrackDatabase } from '@/tracks'
+import { TrackWithBPM, TrackDatabase, trackFormat } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
-import { useSpotifyRedirect, useSpotifyUser, SpotifyApi } from '@/auth'
 import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
 import { useVolume } from '@/volume'
-import { QueueState } from '@/types'
-import { useUser } from '@/firebase'
+import { QueueState, SpotifyApi } from '@/types'
 import { useHotKeys } from '@/hotkeys'
 import { usePresets } from '@/presets'
+import { useSpotifyState } from '@/state'
+import { useSpotifyAuth, useSpotifyClient } from '@/auth'
+import { usePlaybackState } from '@/playing'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -210,17 +217,18 @@ export default defineComponent({
     HelpContent,
     NextUp,
     EditModal,
+    SelectSongModal,
     HelpfulButton
   },
   setup (props, { root: { $root, $route } }) {
-    const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
-    const playback = ref<SpotifyApi.CurrentPlaybackResponse>()
+    const spotifyState = useSpotifyState()
+    const { reauth } = useSpotifyAuth($route, false)
+
     const historyItems = ref<TrackWithBPM[]>([])
     const context = ref<SpotifyApi.PlaylistObjectSimplified>()
     const playlist = ref<TrackWithBPM[]>([])
     const current = ref<TrackWithBPM>()
     const error = ref<SpotifyApi.ErrorObject>()
-    const ready = ref(false)
 
     const queue = reactive<QueueState>({
       loading: true,
@@ -242,8 +250,8 @@ export default defineComponent({
       autoClimbStep: 5
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client, reauth } = useSpotifyRedirect($route, start, update)
+    const { client } = useSpotifyClient()
+
     const clock = useClock()
     const devices = useDevices(client)
     const { startFadeDown, startFadeUp, fading } = useVolume(client)
@@ -251,43 +259,19 @@ export default defineComponent({
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
 
-    function trackFormat (track: TrackWithBPM, showBPM = false): string {
-      const prefix = showBPM && track.bpm ? track.bpm.toFixed() + ' bpm - ' : ''
-      return `${prefix}${track.artist} - ${track.title}`
-    }
-
     function devOpts () {
       return state.value?.device?.id ? { device_id: state.value.device.id } : {}
     }
 
-    async function start () {
-      ready.value = true
-    }
+    const { state, playback, secondsPlayed, secondsTotal } = usePlaybackState(client, reauth)
 
-    async function update () {
-      try {
-        const res = (await client.getMyCurrentPlayingTrack()) as '' | SpotifyApi.CurrentlyPlayingResponse
-        state.value = res === '' ? undefined : res
-        playback.value = await client.getMyCurrentPlaybackState()
-      } catch (err) {
-        console.error(err)
-        if (err && (err as { status: number }).status === 401) reauth() // Authenticated, redirect to loginUrl.
-      }
-    }
-
-    const seconds = computed(() => {
-      return state.value ? (state.value.progress_ms ?? 0) / 1000 : 0
-    })
-    const secondsTotal = computed(() => {
-      return state.value ? (state.value.item?.duration_ms ?? 0) / 1000 : 0
-    })
     const secondsMax = computed(() => {
       return settings.timeLimitEnabled ? settings.timeLimitSeconds : secondsTotal.value
     })
 
     const progressLabel = computed(() => {
       const end = secondsMax.value
-      const current = seconds.value
+      const current = secondsPlayed.value
       const left = Math.max(end - current, 0).toFixed(0)
       const pct = Math.min(100, (current / end) * 100).toFixed(0)
       return current / end < 0.1 ? '' : `${pct}% (${left} sec left)`
@@ -310,7 +294,7 @@ export default defineComponent({
             await client.skipToNext(devOpts())
           }
           queue.sent = false
-          historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 12)
+          historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 5)
           current.value = await tracks.getTrackWithTempo(item.id)
         }
       }
@@ -333,8 +317,8 @@ export default defineComponent({
           function trackProgress (i: number, tot: number) {
             queue.loading = `Loading track tempo ${i} / ${tot}`
           }
-
-          playlist.value = await tracks.getTracksWithTempo(await playlists.getPlaylistTracks(id, playlistProgress), trackProgress)
+          const playlistTracks = await playlists.getPlaylistTracks(id, playlistProgress)
+          playlist.value = await tracks.getTracksWithTempo(playlistTracks, trackProgress)
           queue.loading = false
         }
       }
@@ -434,7 +418,9 @@ export default defineComponent({
       if (context_uri && typeof context_uri === 'string') {
         const dev = device && device.id ? { device_id: device.id } : {}
         await client.play({ context_uri, ...dev })
-        await client.setShuffle(true, { ...dev })
+        try {
+          await client.setShuffle(true, { ...dev })
+        } catch (e) {}
       } else if (state.value && state.value.is_playing) {
         await client.pause()
       } else {
@@ -444,21 +430,7 @@ export default defineComponent({
 
     async function playNext () {
       if (settings.autoQueueEnabled && queue.track && !queue.sent) {
-        settings.timeLimitEnabled = false
-        settings.autoFadeEnabled = false
-
-        console.log('[Skip]: Queuing: ', queue.track.title)
-        await client.queue(`spotify:track:${queue.track.id}`, devOpts())
-        queue.sent = true
-
-        console.log('[Skip]: Fade out!')
-        await startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
-
-        console.log('[Skip]: Skipping to queued item!')
-        await client.skipToNext(devOpts())
-
-        settings.autoFadeEnabled = true
-        settings.timeLimitEnabled = true
+        await playTrack(queue.track)
       } else {
         await client.skipToNext(devOpts())
       }
@@ -472,6 +444,24 @@ export default defineComponent({
       await client.seek(0, devOpts())
     }
 
+    async function playTrack (track: TrackWithBPM) {
+      settings.timeLimitEnabled = false
+      settings.autoFadeEnabled = false
+
+      console.log('[Skip]: Queuing: ', track.title)
+      await client.queue(`spotify:track:${track.id}`, devOpts())
+      queue.sent = true
+
+      console.log('[Skip]: Fade out!')
+      await startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
+
+      console.log('[Skip]: Skipping to queued item!')
+      await client.skipToNext(devOpts())
+
+      settings.autoFadeEnabled = true
+      settings.timeLimitEnabled = true
+    }
+
     async function updateVolume (vol: number) {
       if (vol !== null && vol !== undefined) {
         await client.setVolume(Math.max(0, Math.min(100, vol)), devOpts())
@@ -482,10 +472,6 @@ export default defineComponent({
       await tracks.updateTrackInfo(id, { bpm } as TrackWithBPM)
       current.value = await tracks.getTrackWithTempo(id)
     }
-
-    const user = useUser()
-
-    useSpotifyUser(client)
 
     useHotKeys($root, {
       space: () => play(),
@@ -498,13 +484,13 @@ export default defineComponent({
       pagedown: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 5)
     })
 
-    const { playlists: presets } = usePresets(client, ready)
+    const { playlists: presets } = usePresets()
 
     return {
       name,
       ...clock,
       ...devices,
-      seconds,
+      secondsPlayed,
       secondsTotal,
       secondsMax,
       progressLabel,
@@ -517,6 +503,7 @@ export default defineComponent({
       playNext,
       playPrev,
       playAgain,
+      playTrack,
       playlist,
       context,
       queue,
@@ -526,7 +513,7 @@ export default defineComponent({
       isCurrentWithinRange,
       updateVolume,
       updateTrackInfo,
-      canEdit: computed(() => !!user.id),
+      canEdit: computed(() => !!spotifyState.id),
       presets
     }
   }
