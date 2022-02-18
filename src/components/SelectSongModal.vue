@@ -14,7 +14,7 @@
       footer-bg-variant="dark"
       footer-text-variant="light"
   >
-    <b-form-input type="search" id="input-search" v-model="query" autofocus placeholder="Search track..." class="mb-2"/>
+    <b-form-input type="search" id="input-search" v-model="query" autofocus placeholder="Search track..." class="mb-3"/>
     <div v-if="playlist" class="results">
         <div class="track" v-for="t in tracks" :key="'select-' + t.id" @click="playTrack(t)">
             <div class="inner w-100 p-2">
@@ -25,13 +25,16 @@
                 <span class="bpm" v-text="t.bpm.toFixed(0) + ' BPM'" />
             </div>
         </div>
+        <div class="showall">
+          <b-button variant="link" @click="showAll = true" v-if="!showAll">Show all {{playlist.length}} songs</b-button>
+        </div>
     </div>
   </b-modal>
 </template>
 
 <script lang="ts">
 import { TrackWithBPM, trackFormat } from '@/tracks'
-import { computed, defineComponent, PropType, ref } from '@vue/composition-api'
+import { watch, computed, defineComponent, PropType, ref } from '@vue/composition-api'
 
 export default defineComponent({
   props: {
@@ -39,15 +42,22 @@ export default defineComponent({
   },
   setup (props, { emit, root: { $bvModal } }) {
     const query = ref('')
+    const showAll = ref(false)
+
+    watch(() => props.playlist, (p) => {
+      showAll.value = (p?.length ?? 0) < 10
+    })
+
     return {
       query,
       trackFormat,
+      showAll,
       tracks: computed(() => {
         const q = query.value.toLowerCase()
         return props.playlist?.filter((t) => {
           return t.artist.toLowerCase().includes(q) ||
                 t.title.toLowerCase().includes(q)
-        }).slice(0, 10) ?? []
+        }).slice(0, showAll.value ? undefined : 10) ?? []
       }),
       playTrack: (t: TrackWithBPM) => {
         $bvModal.hide('select-track')
@@ -61,13 +71,20 @@ export default defineComponent({
     $bg: rgba(#252525, 1);
     .results {
         background: $bg;
+        .showall {
+          display: flex;
+          justify-content: center
+        }
         .track {
             cursor: pointer;
             height: 2.8em;
             user-select: none;
             &:hover {
                 background: lighten($bg, 10%);
-                .inner .icon,.text {
+
+                .inner .icon {
+                  color: var(--primary);
+
                   svg {
                     // font-size: 1.1rem;
                     opacity: 1.0;
@@ -76,7 +93,8 @@ export default defineComponent({
             }
             &:active,&:active {
                 background: lighten($bg, 20%);
-                .inner .icon,.text {
+                .inner .icon {
+                  color: var(--primary);
                   svg {
                     // font-size: 1.2rem;
                     opacity: 1.0;
@@ -90,10 +108,10 @@ export default defineComponent({
                 margin-left: auto;
               }
               .icon {
-                color: #2bab66;
+                color: var(--secondary);
                 svg {
                   transition: all 0s cubic-bezier(0.645, 0.045, 0.355, 1);
-                  opacity: 0.0;
+                  opacity: 0.5;
                 }
               }
             }

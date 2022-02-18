@@ -13,22 +13,20 @@
             </h1>
           </div>
 
-          <b-row align-v="center" align-h="center">
-            <b-col cols="auto" class="d-block d-lg-none">
-              <PlaylistSelector :context="context" v-if="context" @play="play($event)" />
+          <b-row align-v="center">
+            <b-col cols="12">
+              <span class="seconds-left"> {{ secondsPlayed.toFixed() }} / {{ secondsMax.toFixed() }} seconds </span>
             </b-col>
+          </b-row>
+          <b-row align-v="center" align-h="center" class="control-buttons">
             <b-col cols="auto">
-              <HelpfulButton class="d-inline-block" :disabled="queue.sent" v-b-modal="'select-track'">
-                <b-icon-search scale="2.0" class="mt-4 mb-4" />
-              </HelpfulButton>
-
-              <HelpfulButton class="d-inline-block mr-4" :disabled="queue.sent" @click="playAgain">
-                <b-icon-arrow-counterclockwise scale="2.0" class="mt-4 mb-4" />
-              </HelpfulButton>
-
-              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playPrev">
+              <b-button variant="link" :disabled="queue.sent" @click="playPrev">
                 <b-icon-skip-forward-circle scale="2.0" class="mt-4 mb-4" />
-              </HelpfulButton>
+              </b-button>
+
+              <b-button variant="link" @click="playAgain" :disable="queue.sent" class="again">
+                <b-icon-arrow-counterclockwise scale="1.4" class="mt-4 mb-4" />
+              </b-button>
 
               <b-button variant="link" @click="play" v-if="state.is_playing">
                 <b-icon-pause scale="3.0" class="mt-4 mb-4" />
@@ -37,19 +35,20 @@
                 <b-icon-play scale="3.0" class="mt-4 mb-4" />
               </b-button>
 
-              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playNext">
+              <b-button variant="link" :disabled="queue.sent" @click="playNext">
                 <b-icon-skip-backward-circle scale="2.0" class="mt-4 mb-4" />
-              </HelpfulButton>
+              </b-button>
             </b-col>
-            <b-col cols="auto"
-              ><span class="seconds-left"> {{ secondsPlayed.toFixed() }} / {{ secondsMax.toFixed() }} seconds </span>
-            </b-col>
+            <div style="position: absolute; right:0">
+              <b-button variant="link" :disabled="queue.sent" v-b-modal="'select-track'">
+                <b-icon-search scale="1.4" class="mr-2" />
+                Select song
+              </b-button>
+            </div>
+
           </b-row>
 
           <b-row align-v="center" align-h="center" class="device mb-3"  v-if="playback.device">
-            <b-col cols="12" class="mb-0">
-              Playing on {{ playback.device.name }} <DeviceIcon class="ml-2" :type="playback.device.type" />
-            </b-col>
             <b-col cols="12" v-if="thisDevice && playback.device.id !== thisDevice.id">
               <small><b-link @click="playHere" href="#">Play here instead</b-link></small>
             </b-col>
@@ -165,7 +164,6 @@ import StartSceen from '@/components/StartSceen.vue'
 import NextUp from '@/components/NextUp.vue'
 import EditModal from '@/components/EditModal.vue'
 import SelectSongModal from '@/components/SelectSongModal.vue'
-import HelpfulButton from '@/components/HelpfulButton.vue'
 import DeviceIcon from '@/components/DeviceIcon.vue'
 
 import { TrackWithBPM, TrackDatabase, trackFormat } from '@/tracks'
@@ -220,7 +218,6 @@ export default defineComponent({
     NextUp,
     EditModal,
     SelectSongModal,
-    HelpfulButton,
     DeviceIcon
   },
   setup (props, { root: { $root, $route } }) {
@@ -269,7 +266,7 @@ export default defineComponent({
     const { state, playback, secondsPlayed, secondsTotal } = usePlaybackState(client, reauth)
 
     const secondsMax = computed(() => {
-      return settings.timeLimitEnabled ? settings.timeLimitSeconds : secondsTotal.value
+      return settings.timeLimitEnabled ? Math.min(settings.timeLimitSeconds, secondsTotal.value) : secondsTotal.value
     })
 
     const progressLabel = computed(() => {
@@ -434,7 +431,6 @@ export default defineComponent({
               try {
                 await client.setShuffle(true, { ...dev })
                 await sleep(100)
-                await client.skipToNext({ ...dev })
                 break
               } catch (e) {}
             }
@@ -559,6 +555,15 @@ export default defineComponent({
   .state {
     .header {
       text-align: center;
+    }
+    .control-buttons {
+      .btn {
+        padding-top: 0;
+        padding-bottom: 0;
+        &.again {
+          padding-right: 0;
+        }
+      }
     }
     .image {
       margin-top: 10px;

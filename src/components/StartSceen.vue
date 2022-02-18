@@ -94,7 +94,7 @@ export default defineComponent({
     const pending = ref()
     return {
       thisDevice: computed(() => props.devices?.find(d => d.name === 'Spotify Agent')),
-      otherDevices: computed(() => props.devices?.filter(d => d.name && d.name !== 'Spotify Agent')),
+      otherDevices: computed(() => props.devices?.filter(d => d.name && d.name !== 'Spotify Agent') ?? []),
       play: (uri: string, device?: SpotifyApi.UserDevice, key?: string) => {
         pending.value = key
         emit('play', { id: uri, device: device })
