@@ -1,23 +1,37 @@
 <template>
-  <div class="playlist-list w-100">
+  <div class="playlist-list w-100 pt-2">
     <!--  -->
 
     <div class="task">
       <div class="abstract">
-        <PlaylistBadge :title="context.name" :description="context.owner.display_name || ''" :img="cover" />
+        <PlaylistBadge :title="name" :owner="context.owner.display_name || ''" :img="cover" />
       </div>
       <div class="details">
-        <div class="details__inner">
-          <PlaylistBadge
-            :title="pl.name"
-            :description="pl.owner"
-            :img="pl.image"
-            :header="''"
-            class="mt-1 mr-1"
-            @click="$emit('play', pl.uri)"
-            v-for="pl in others"
-            :key="pl.id"
-          />
+        <div class="details__inner pb-2">
+          <div class="spacer">&nbsp;</div>
+          <b-overlay :show="pending === pl.id" rounded="sm" variant="transparent" v-for="pl in others" :key="pl.id">
+            <PlaylistBadge
+                :title="pl.name"
+                :owner="pl.owner"
+                :img="pl.image"
+                :header="''"
+                class="mt-1 mr-1"
+                @click="play(pl)"
+              />
+          </b-overlay>
+          <div class="spacer" v-if="own.length > 0">&nbsp;</div>
+          <b-overlay :show="pending === pl.id" rounded="lg" variant="transparent" v-for="pl in own" :key="pl.id">
+            <PlaylistBadge
+                :title="pl.name"
+                :owner="pl.owner"
+                :img="pl.image"
+                :header="''"
+                class="mt-1 mr-1"
+                @click="play(pl)"
+              />
+          </b-overlay>
+          <div class="spacer" v-if="own.length === 0">&nbsp;</div>
+          <b-button variant="primary" @click="getOwn" v-if="own.length === 0">Get your playlists</b-button>
         </div>
       </div>
     </div>
@@ -25,12 +39,13 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType } from '@vue/composition-api'
+import { computed, defineComponent, PropType, ref, watch } from '@vue/composition-api'
 
-import { minBy } from 'lodash'
+import { minBy, sortBy } from 'lodash'
 import PlaylistBadge from '@/components/PlaylistBadge.vue'
-import { PlaylistInfo } from '@/presets'
+import { createPlaylistInfo, PlaylistInfo } from '@/playlists'
 import { SpotifyApi } from '@/types'
+import { useSpotifyClient } from '@/auth'
 
 export default defineComponent({
   components: { PlaylistBadge },
@@ -46,10 +61,34 @@ export default defineComponent({
       default: () => []
     }
   },
-  setup (props) {
+  setup (props, { emit }) {
+    const { client } = useSpotifyClient()
+    const own = ref<PlaylistInfo[]>([])
+    const pending = ref()
+
+    watch(() => props.context.id, (id) => {
+      if (id === pending.value) pending.value = undefined
+    })
+
     return {
       cover: computed(() => minBy(props.context.images, i => i.height)?.url ?? ''),
-      others: computed(() => props.items.filter(p => p.id !== props.context.id))
+      name: computed(() => props.context.name.replace(/ MASTER \(v\d+\)/gi, '')),
+      others: computed(() => props.items.filter(p => p.id !== props.context.id)),
+      getOwn: async () => {
+        const { items } = await client.getUserPlaylists({ limit: 50 } as unknown as string)
+        sortBy(items, i => i.name)
+        own.value = items.map(p => createPlaylistInfo(p))
+          .filter(p => !props.items.map(i => i.id).includes(p.id))
+      },
+      play: async (playlist: PlaylistInfo) => {
+        pending.value = playlist.id
+        emit('play', playlist.uri)
+        setTimeout(() => {
+          pending.value = undefined
+        }, 3000)
+      },
+      own,
+      pending
     }
   }
 })
@@ -57,6 +96,8 @@ export default defineComponent({
 
 <style scoped lang="scss">
 $bg: rgba(#252525, 1);
+$primary: rgba(#2bab66, 1);
+
 .playlist-list {
   background: $bg;
   position: relative;
@@ -87,8 +128,18 @@ $bg: rgba(#252525, 1);
   flex-direction: row-reverse;
   padding-right: 8px;
   .task:hover & {
-    color: #2bab66;
+    color: $primary;
   }
+}
+
+.spacer {
+  width: calc(100% - 4em);
+  height: 2px;
+  border-radius: 10px;
+  background: rgba($primary, 0.4);
+  margin-right: calc(2em - 4px);
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
 }
 
 .details {
@@ -111,11 +162,29 @@ $bg: rgba(#252525, 1);
     transform: rotateX(0deg);
   }
 }
-
 .details__inner {
   background: rgba(darken($bg, 0%), 0.7);
   display: flex;
   flex-direction: column;
   padding-right: 8px;
+  align-items: flex-end;
+  max-height: 50vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+
+  scrollbar-color: $primary $bg;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $primary;
+  }
+  &::-webkit-scrollbar-track {
+    background: $bg;
+  }
+
 }
+
 </style>

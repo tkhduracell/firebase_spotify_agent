@@ -1,5 +1,5 @@
 import { useSpotifyState } from './state'
-import { onMounted, ref, watch } from '@vue/composition-api'
+import { computed, onMounted, ref, watch } from '@vue/composition-api'
 import SpotifyWebApi from 'spotify-web-api-js'
 
 export function useDevices (client: SpotifyWebApi.SpotifyWebApiJs) {
@@ -16,5 +16,5 @@ export function useDevices (client: SpotifyWebApi.SpotifyWebApiJs) {
 
   onMounted(() => loadDevices())
 
-  return { devices, loadDevices }
+  return { devices, loadDevices, thisDevice: computed(() => devices.value?.devices.find(d => d.name === 'Spotify Agent')) }
 }

@@ -46,7 +46,7 @@
       <div class="d-none d-xl-inline-block">XL</div>
       <div class="d-inline-block ml-1" v-if="isWakeLockActive">- Wakelock</div>
     </footer>
-    <LoginForm />
+    <LoginDialog />
   </div>
 </template>
 
@@ -56,7 +56,7 @@ import { useSpotifyAuth } from './auth'
 import { useWakeLock } from '@vueuse/core'
 import { useUserState, useSpotifyState } from './state'
 import { usePlayerReady } from './player'
-import LoginForm from './components/LoginForm.vue'
+import LoginDialog from './components/LoginDialog.vue'
 
 export default defineComponent({
   name: 'App',
@@ -94,7 +94,7 @@ export default defineComponent({
       isWakeLockActive
     }
   },
-  components: { LoginForm }
+  components: { LoginDialog }
 })
 </script>
 <style lang="scss" scoped>

@@ -2,7 +2,7 @@ import { useUserState } from './state'
 import { onMounted, onUnmounted } from '@vue/composition-api'
 import { initializeApp } from 'firebase/app'
 
-import { getAuth, signInWithEmailAndPassword, Unsubscribe } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider, signInWithPopup, Unsubscribe } from 'firebase/auth'
 
 import { getFirestore } from 'firebase/firestore'
 
@@ -19,9 +19,6 @@ const firebaseConfig = {
 initializeApp(firebaseConfig)
 export const auth = getAuth()
 
-export function signIn (user: string, pass: string) {
-  return signInWithEmailAndPassword(auth, user, pass)
-}
 export const firestore = getFirestore()
 
 export function useFirebaseUser () {
@@ -42,4 +39,16 @@ export function useFirebaseUser () {
       unsubcribe()
     }
   })
+
+  async function signIn () {
+    const provider = new GoogleAuthProvider()
+    provider.addScope('profile')
+    provider.addScope('email')
+    const result = await signInWithPopup(auth, provider)
+    console.log('Redirect success', result)
+    state.id = result.user?.uid
+    state.name = result.user?.displayName ?? ''
+  }
+
+  return { signIn }
 }

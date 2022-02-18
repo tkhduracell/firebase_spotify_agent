@@ -22,14 +22,17 @@ export function useSpotifyAuth (
 
   onMounted(async () => {
     if (state.token) return
-    const token = getToken($route.hash)
+    const token = getToken($route.hash) ?? getToken(document.location.hash)
     if (!token) {
+      // eslint-disable-next-line no-debugger
+      debugger
       reauth()
     }
     state.token = token ?? ''
   })
 
   function reauth () {
+    state.token = ''
     document.location = authUrl
   }
 
@@ -37,9 +40,15 @@ export function useSpotifyAuth (
     watch(() => state.token, async (t) => {
       const client = new SpotifyApi()
       client.setAccessToken(t)
-      const { display_name, id } = await client.getMe()
-      state.id = id ?? ''
-      state.name = display_name ?? ''
+      try {
+        const { display_name, id } = await client.getMe()
+        state.id = id ?? ''
+        state.name = display_name ?? ''
+      } catch (e) {
+        if (e instanceof XMLHttpRequest && e.status === 401) {
+          reauth()
+        }
+      }
     })
   }
 

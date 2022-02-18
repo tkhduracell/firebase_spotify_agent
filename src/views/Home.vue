@@ -46,6 +46,15 @@
             </b-col>
           </b-row>
 
+          <b-row align-v="center" align-h="center" class="device mb-3"  v-if="playback.device">
+            <b-col cols="12" class="mb-0">
+              Playing on {{ playback.device.name }} <DeviceIcon class="ml-2" :type="playback.device.type" />
+            </b-col>
+            <b-col cols="12" v-if="thisDevice && playback.device.id !== thisDevice.id">
+              <small><b-link @click="playHere" href="#">Play here instead</b-link></small>
+            </b-col>
+          </b-row>
+
           <b-progress height="2rem" :max="secondsMax" class="mb-3 seconds">
             <b-progress-bar :value="secondsPlayed" :label="progressLabel"></b-progress-bar>
           </b-progress>
@@ -121,15 +130,6 @@
         />
       </b-col>
     </b-row>
-    <b-row v-else-if="state && !state.is_playing" align-h="center">
-      <h1>Not playing</h1>
-      <p>Play something with you spotify client.</p>
-      <b>Try this:</b>
-      <b-button variant="outline-primary" @click="play('spotify:playlist:00968xdUCWZgRHZqepn8IQ')">
-        <b-icon-play />
-        Bugg MASTER
-      </b-button>
-    </b-row>
     <b-row v-else-if="error && error.status === 401">
       <b-card class="bg-dark text-light">
         <p>You have been logged out.</p>
@@ -138,7 +138,7 @@
     </b-row>
     <b-row v-else>
       <b-col class="mt-4" offset="3" cols="6">
-        <HelpContent
+        <StartSceen
           :presets="presets"
           :devices="devices ? devices.devices : undefined"
           @play="play($event.id, $event.device)"
@@ -161,11 +161,12 @@ import PlaybackAutoQueuer from '@/components/PlaybackAutoQueuer.vue'
 import PlaybackAutoClimb from '@/components/PlaybackAutoClimb.vue'
 import PlaybackAutoFade from '@/components/PlaybackAutoFade.vue'
 import PlaylistSelector from '@/components/PlaylistSelector.vue'
-import HelpContent from '@/components/HelpContent.vue'
+import StartSceen from '@/components/StartSceen.vue'
 import NextUp from '@/components/NextUp.vue'
 import EditModal from '@/components/EditModal.vue'
 import SelectSongModal from '@/components/SelectSongModal.vue'
 import HelpfulButton from '@/components/HelpfulButton.vue'
+import DeviceIcon from '@/components/DeviceIcon.vue'
 
 import { TrackWithBPM, TrackDatabase, trackFormat } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
@@ -175,9 +176,10 @@ import { useVolume } from '@/volume'
 import { QueueState, SpotifyApi } from '@/types'
 import { useHotKeys } from '@/hotkeys'
 import { usePresets } from '@/presets'
-import { useSpotifyState } from '@/state'
+import { useUserState } from '@/state'
 import { useSpotifyAuth, useSpotifyClient } from '@/auth'
 import { usePlaybackState } from '@/playing'
+import { sleep } from '@/sleep'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -214,14 +216,15 @@ export default defineComponent({
     PlaybackAutoClimb,
     PlaybackAutoFade,
     PlaylistSelector,
-    HelpContent,
+    StartSceen,
     NextUp,
     EditModal,
     SelectSongModal,
-    HelpfulButton
+    HelpfulButton,
+    DeviceIcon
   },
   setup (props, { root: { $root, $route } }) {
-    const spotifyState = useSpotifyState()
+    const userState = useUserState()
     const { reauth } = useSpotifyAuth($route, false)
 
     const historyItems = ref<TrackWithBPM[]>([])
@@ -260,7 +263,7 @@ export default defineComponent({
     const tracks = new TrackDatabase(client)
 
     function devOpts () {
-      return state.value?.device?.id ? { device_id: state.value.device.id } : {}
+      return playback.value?.device?.id ? { device_id: playback.value.device.id } : {}
     }
 
     const { state, playback, secondsPlayed, secondsTotal } = usePlaybackState(client, reauth)
@@ -320,6 +323,10 @@ export default defineComponent({
           const playlistTracks = await playlists.getPlaylistTracks(id, playlistProgress)
           playlist.value = await tracks.getTracksWithTempo(playlistTracks, trackProgress)
           queue.loading = false
+          if (current.value) {
+            const { id } = current.value
+            current.value = await tracks.getTrackWithTempo(id)
+          }
         }
       }
     )
@@ -415,16 +422,28 @@ export default defineComponent({
     })
 
     async function play (context_uri?: string, device?: SpotifyApi.UserDevice) {
+      const dev = device && device.id ? { device_id: device.id } : {}
       if (context_uri && typeof context_uri === 'string') {
-        const dev = device && device.id ? { device_id: device.id } : {}
         await client.play({ context_uri, ...dev })
         try {
           await client.setShuffle(true, { ...dev })
-        } catch (e) {}
+        } catch (e) {
+          for (let i = 0; i < 10; i++) {
+            await sleep(500)
+            if (!playback.value?.device.is_restricted) {
+              try {
+                await client.setShuffle(true, { ...dev })
+                await sleep(100)
+                await client.skipToNext({ ...dev })
+                break
+              } catch (e) {}
+            }
+          }
+        }
       } else if (state.value && state.value.is_playing) {
-        await client.pause()
+        await client.pause({ ...dev })
       } else {
-        await client.play()
+        await client.play({ ...dev })
       }
     }
 
@@ -468,6 +487,12 @@ export default defineComponent({
       }
     }
 
+    async function playHere () {
+      if (devices.thisDevice.value) {
+        await client.transferMyPlayback([devices.thisDevice.value.id ?? ''])
+      }
+    }
+
     async function updateTrackInfo ({ id, bpm }: TrackWithBPM) {
       await tracks.updateTrackInfo(id, { bpm } as TrackWithBPM)
       current.value = await tracks.getTrackWithTempo(id)
@@ -504,6 +529,7 @@ export default defineComponent({
       playPrev,
       playAgain,
       playTrack,
+      playHere,
       playlist,
       context,
       queue,
@@ -513,7 +539,7 @@ export default defineComponent({
       isCurrentWithinRange,
       updateVolume,
       updateTrackInfo,
-      canEdit: computed(() => !!spotifyState.id),
+      canEdit: computed(() => !!userState.id),
       presets
     }
   }
@@ -538,9 +564,11 @@ export default defineComponent({
       margin-top: 10px;
     }
     .seconds {
+      user-select: none;
       background: #1b5894;
     }
     .seconds-left {
+      user-select: none;
       font-size: 2em;
     }
 
@@ -548,21 +576,22 @@ export default defineComponent({
       font-size: 7em;
       line-height: 1em;
       text-align: center;
+      user-select: none;
 
       &.warntempo {
+        animation: pulse-animation 2s infinite;
         color: rgb(190, 146, 0);
-        animation: pulse-animation 1s infinite;
       }
 
       @keyframes pulse-animation {
         0% {
-          opacity: 1;
+          opacity: 0.7;
         }
         50% {
           opacity: 0;
         }
         100% {
-          opacity: 1;
+          opacity: 0.7;
         }
       }
     }

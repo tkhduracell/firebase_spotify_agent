@@ -6,7 +6,7 @@
     <div class="text">
       <div class="header" v-text="header" />
       <div class="name" v-text="title" />
-      <div class="owner" v-text="description" />
+      <div class="owner" v-text="'av ' + owner" />
     </div>
   </div>
 </template>
@@ -19,7 +19,7 @@ export default defineComponent({
   props: {
     header: { type: String, required: false, default: () => 'Spelar från' },
     title: { type: String, required: true },
-    description: { type: String, required: true },
+    owner: { type: String, required: true },
     img: { type: String, required: true }
   }
 })

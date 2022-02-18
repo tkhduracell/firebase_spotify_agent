@@ -7,9 +7,9 @@ export type SpotifyState = {
     id: string,
     name: string,
     token: string,
-    device_id: string,
+    device_id: string | null,
     player: SpotifyPlayer | null,
-    playerState: SpotifyPlayerState | null
+    player_state: SpotifyPlayerState | null
 }
 
 export const useSpotifyState = createGlobalState<SpotifyState>(() => reactive({
@@ -18,7 +18,7 @@ export const useSpotifyState = createGlobalState<SpotifyState>(() => reactive({
   token: '',
   device_id: '',
   player: null,
-  playerState: null
+  player_state: null
 }))
 
 export type UserState = {

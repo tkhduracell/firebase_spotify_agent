@@ -9,13 +9,15 @@
       </b-col>
     </b-row>
     <b-row align-h="center">
-      <b-col cols="auto">
-        <b-form-group label="BPM" v-slot="{ ariaDescribedby }">
-          <b-spinbutton v-model="tempo" min="80" max="210" step="5" :aria-describedby="ariaDescribedby" />
-        </b-form-group>
+      <b-col cols="3">
+        <b-row class="h-100" align-h="center" align-content="center" align-v="center">
+          <b-col cols="auto" @click="tempo = Math.min(tempo - step, 210)"><b-icon-dash scale='3.0'/></b-col>
+          <b-col cols="auto"><div class="tempo">{{ tempo }}</div></b-col>
+          <b-col cols="auto" @click="tempo = Math.max(tempo + step, 80)"><b-icon-plus scale='3.0'/></b-col>
+        </b-row>
       </b-col>
       <b-col cols="3">
-        <b-form-group label="Artists" v-slot="{ ariaDescribedby }">
+        <b-form-group label="Artists (max 5)" v-slot="{ ariaDescribedby }">
           <b-form-checkbox-group
             v-model="seed_artists"
             :options="options_artists"
@@ -25,13 +27,13 @@
         </b-form-group>
       </b-col>
       <b-col cols="3">
-        <b-form-group label="Genres" v-slot="{ ariaDescribedby }">
-          <b-form-checkbox-group v-model="seed_artists" :options="options_genres" name="seed_genres" :aria-describedby="ariaDescribedby" />
+        <b-form-group label="Tracks (max 5)" v-slot="{ ariaDescribedby }">
+          <b-form-checkbox-group v-model="seed_artists" :options="options_tracks" name="seed_tracks" :aria-describedby="ariaDescribedby" />
         </b-form-group>
       </b-col>
       <b-col cols="3">
-        <b-form-group label="Tracks" v-slot="{ ariaDescribedby }">
-          <b-form-checkbox-group v-model="seed_artists" :options="options_tracks" name="seed_tracks" :aria-describedby="ariaDescribedby" />
+        <b-form-group label="Genres (max 5)" v-slot="{ ariaDescribedby }">
+          <b-form-checkbox-group v-model="seed_artists" :options="options_genres" name="seed_genres" :aria-describedby="ariaDescribedby" />
         </b-form-group>
       </b-col>
     </b-row>
@@ -40,6 +42,11 @@
         <div class="d-flex flex-wrap">
           <b-link class="" variant="link" href="#" @click="play(t)">{{ t.bpm.toFixed() }} - {{ t.artist }} - {{ t.title }} </b-link>
         </div>
+      </b-col>
+    </b-row>
+    <b-row v-else-if="error">
+      <b-col>
+        {{ error }}
       </b-col>
     </b-row>
     <b-row v-else>
@@ -51,24 +58,25 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from '@vue/composition-api'
+import { computed, defineComponent, onMounted, ref, watch } from '@vue/composition-api'
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
-import { useSpotifyAuth, useSpotifyClient } from '@/auth'
+import { useSpotifyClient } from '@/auth'
 import { SpotifyApi } from '@/types'
-import { usePlaybackState } from '@/playing'
+import { useSpotifyState } from '@/state'
 
 export default defineComponent({
   name: 'Recommendation',
   components: {},
-  setup (props, { root: { $router } }) {
+  setup () {
     const { client } = useSpotifyClient()
-    const { reauth } = useSpotifyAuth($router.currentRoute, false)
-    const { playback } = usePlaybackState(client, reauth, 5000)
+    const state = useSpotifyState()
+    const token = computed(() => state.token)
 
     const db = new TrackDatabase(client)
 
     const tempo = ref<number>(160)
     const recs = ref<SpotifyApi.RecommendationsObject>()
+    const error = ref<any>()
 
     const options_artists = [
       { value: 'spotify:artist:4rMk4gSVtsxoOb7NPwF6hA', text: 'Donnez' },
@@ -121,38 +129,58 @@ export default defineComponent({
     const seed_genres = ref<string[]>([])
 
     const tracks = ref<TrackWithBPM[]>()
+    const isWithin = (v: number, min: number, max: number) => v >= min && v <= max
+
     watch(recs, async r => {
-      tracks.value = !r ? [] : await Promise.all(r.tracks.map(t => db.getTrackWithTempo(t.id)))
+      const res = await Promise.all((r?.tracks ?? []).map(t => db.getTrackWithTempo(t.id)))
+      tracks.value = !r && res ? [] : res
+        .filter(t => isWithin(t.bpm, tempo.value * 0.7, tempo.value * 1.3))
+        .sort((lhs, rhs) => lhs.bpm - rhs.bpm)
     })
 
     async function play (track: TrackWithBPM) {
-      await client.queue('spotify:track:' + track.id)
-      setTimeout(async () => {
-        await client.skipToNext()
-      }, 500)
+      if (state.device_id) {
+        await client.queue('spotify:track:' + track.id)
+        setTimeout(async () => {
+          await client.skipToNext()
+        }, 500)
+      } else {
+        console.log('No device to play on!')
+      }
     }
 
     async function onReady () {
       recs.value = undefined
-      recs.value = await client.getRecommendations({
-        market: 'SE',
-        limit: 40,
-        seed_artists: seed_artists.value.map(opt => opt.split(':')[2]),
-        seed_genres: seed_genres.value,
-        seed_tracks: seed_tracks.value.map(uri => uri.split(':')[2]),
-        target_tempo: tempo.value
-      })
+      error.value = undefined
+      try {
+        recs.value = await client.getRecommendations({
+          market: 'SE',
+          limit: 40,
+          seed_artists: seed_artists.value.map(opt => opt.split(':')[2]),
+          seed_genres: seed_genres.value,
+          seed_tracks: seed_tracks.value.map(uri => uri.split(':')[2]),
+          target_tempo: tempo.value
+        })
+      } catch (e) {
+        const req = e as XMLHttpRequest
+        error.value = JSON.parse(req.response)
+      }
     }
 
-    watch([tempo, seed_artists, seed_tracks, seed_genres], () => onReady())
+    watch([token, tempo, seed_artists, seed_tracks, seed_genres], () => {
+      if (token.value) onReady()
+    })
+
+    onMounted(() => {
+      if (token.value) onReady()
+    })
 
     return {
       recs,
+      error,
       tracks,
       tempo,
       play,
-
-      playback,
 
       options_tracks,
       options_artists,
@@ -160,7 +188,9 @@ export default defineComponent({
 
       seed_tracks,
       seed_artists,
-      seed_genres
+      seed_genres,
+
+      step: 5
     }
   }
 })
@@ -298,4 +328,8 @@ const a = {
 }
 </script>
 
-<style lang="scss"></style>
+<style lang="scss">
+.tempo {
+  font-size: 300%;
+}
+</style>

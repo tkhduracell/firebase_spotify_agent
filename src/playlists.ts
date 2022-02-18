@@ -4,6 +4,7 @@ import { createLocalDB, LocalDB } from '@/local-db'
 import { ProgressFn } from './types'
 import { Timer } from './timer'
 import { sleep } from './sleep'
+import { minBy } from 'lodash'
 
 export class PlaylistDatabase {
   client: Spotify.SpotifyWebApiJs
@@ -30,7 +31,7 @@ export class PlaylistDatabase {
 
     // Prune saved if changed snapshot
     if (current !== previous) {
-      console.log('[platlist] Playlist', id, 'has changed, clearing saved...', previous, '->', current)
+      console.log('[playlist] Playlist', id, 'has changed, clearing saved...', previous, '->', current)
       this.db.clear(id)
       this.db.clear(`${id}:version`)
     }
@@ -74,5 +75,27 @@ export class PlaylistDatabase {
     }
 
     return all.map(t => t.id)
+  }
+}
+
+export type PlaylistInfo = { uri: string; name: string; id: string; description: string; image: string; image_large: string; owner: string, size: number }
+
+function selectImageSmall (images: SpotifyApi.ImageObject[]): string {
+  return minBy(images, i => Math.abs((i.height ?? 0) - 150))?.url ?? 'https://picsum.photos/200/200'
+}
+function selectImageLarge (images: SpotifyApi.ImageObject[]): string {
+  return minBy(images, i => Math.abs((i.height ?? 0) - 300))?.url ?? 'https://picsum.photos/400/400'
+}
+
+export function createPlaylistInfo ({ id, uri, name, images, description, owner, tracks }: SpotifyApi.PlaylistObjectSimplified): PlaylistInfo {
+  return {
+    id,
+    uri,
+    name: name ?? '',
+    description: description ?? '',
+    image: selectImageSmall(images),
+    image_large: selectImageLarge(images),
+    owner: owner.display_name ?? '',
+    size: tracks.total
   }
 }
