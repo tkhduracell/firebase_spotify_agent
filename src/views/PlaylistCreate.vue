@@ -61,7 +61,7 @@
 import { defineComponent, reactive, computed, Ref, watch } from '@vue/composition-api'
 
 import { TrackWithBPM, TrackDatabase, trackFormat } from '@/tracks'
-import { useSpotifyAuth, useSpotifyClient } from '@/auth'
+import { useSpotifyClient } from '@/auth'
 import { PlaylistDatabase } from '@/playlists'
 import { createLocalDB, VERSION } from '@/local-db'
 import { SpotifyApi } from '@/types'
@@ -84,9 +84,8 @@ export default defineComponent({
       urls: [{ value: '' }] as { value: string }[]
     }) as unknown as Ref<{ urls: { value: string }[] }>
 
-    const { reauth } = useSpotifyAuth($router.currentRoute, false)
     const { client } = useSpotifyClient()
-    const { state } = usePlaybackState(client, reauth, 5000)
+    const { state } = usePlaybackState(client, 5000)
 
     const tracksDB = new TrackDatabase(client)
     const playlistsDB = new PlaylistDatabase(client)

@@ -14,7 +14,6 @@
     "bootstrap-vue": "^2.21.2",
     "chart.js": "^3.6.0",
     "core-js": "^3.19.1",
-    "firebase": "^9.4.1",
     "lodash": "^4.17.21",
     "spotify-web-api-js": "^1.5.2",
     "spotify-web-playback-ts": "^0.0.2",
@@ -64,7 +63,9 @@
     },
     "rules": {
       "camelcase": "off",
-      "@typescript-eslint/explicit-module-boundary-types": "off"
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "no-debugger": "off",
+      "standard/no-callback-literal": "off"
     },
     "ignorePatterns": "node_modeuls/**/*.*"
   },

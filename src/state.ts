@@ -2,20 +2,21 @@ import { reactive } from '@vue/composition-api'
 import { createGlobalState } from '@vueuse/core'
 import { SpotifyPlayer } from 'spotify-web-playback-ts'
 import { SpotifyPlayerState } from 'spotify-web-playback-ts/lib/types'
+import { SpotifyToken } from './auth'
 
 export type SpotifyState = {
-    id: string,
-    name: string,
-    token: string,
-    device_id: string | null,
-    player: SpotifyPlayer | null,
-    player_state: SpotifyPlayerState | null
+  id: string,
+  name: string,
+  token: SpotifyToken | null,
+  device_id: string | null,
+  player: SpotifyPlayer | null,
+  player_state: SpotifyPlayerState | null
 }
 
 export const useSpotifyState = createGlobalState<SpotifyState>(() => reactive({
   id: '',
   name: '',
-  token: '',
+  token: null,
   device_id: '',
   player: null,
   player_state: null

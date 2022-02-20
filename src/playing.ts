@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, ref } from '@vue/composition-api'
 import { useInterval } from 'vue-composable'
 import { SpotifyApi } from './types'
 
-export function usePlaybackState (client: SpotifyApi, onUnauthenticated: () => void, rate = 1000) {
+export function usePlaybackState (client: SpotifyApi, rate = 1000) {
   const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
   const playback = ref<SpotifyApi.CurrentPlaybackResponse>()
 
@@ -14,7 +14,6 @@ export function usePlaybackState (client: SpotifyApi, onUnauthenticated: () => v
         playback.value = await client.getMyCurrentPlaybackState()
       } catch (err) {
         console.error(err)
-        if (err && (err as { status: number }).status === 401) onUnauthenticated()
       }
     }
   }, rate)

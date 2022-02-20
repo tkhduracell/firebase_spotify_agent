@@ -22,5 +22,9 @@ module.exports = {
       envs.BUILD_TIME = '"' + moment().format('YYYY-MM-DD HH:mm:SS') + '"'
       return args
     })
+
+    config.module.rule('eslint').use('eslint-loader').options({
+      fix: true
+    })
   }
 }

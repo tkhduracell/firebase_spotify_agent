@@ -10,7 +10,7 @@
 
       <b-collapse id="nav-collapse" is-nav>
         <b-navbar-nav>
-          <b-nav-item active-class="active" exact :to="{ name: 'Home', hash: $route.hash }">Home</b-nav-item>
+          <b-nav-item active-class="active" exact :to="{ name: 'Player'}">Player</b-nav-item>
           <b-nav-item-dropdown text="Tools" right>
             <b-dropdown-item active-class="active" :to="{ name: 'Recommendations' }">Song finder</b-dropdown-item>
             <b-dropdown-item active-class="active" :to="{ name: 'PlaylistInspect' }">Playlist Inspector</b-dropdown-item>
@@ -66,7 +66,7 @@ export default defineComponent({
   },
   setup (props, { root: { $el, $router } }) {
     const { BUILD_GIT_COMMIT_HASH, NODE_ENV, BUILD_TIME } = process.env
-    useSpotifyAuth($router.currentRoute, true)
+    useSpotifyAuth($router)
 
     const spotifyState = useSpotifyState()
     const userState = useUserState()

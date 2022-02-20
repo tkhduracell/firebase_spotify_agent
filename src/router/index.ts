@@ -1,14 +1,22 @@
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
-import Home from '../views/Home.vue'
+import Player from '../views/Player.vue'
+import Callback from '../views/Callback.vue'
+import Login from '../views/Login.vue'
+import Start from '../views/Start.vue'
 
 Vue.use(VueRouter)
 
 const routes: Array<RouteConfig> = [
   {
     path: '/',
-    name: 'Home',
-    component: Home
+    name: 'Start',
+    component: Start
+  },
+  {
+    path: '/player',
+    name: 'Player',
+    component: Player
   },
   {
     path: '/about',
@@ -43,9 +51,14 @@ const routes: Array<RouteConfig> = [
     }
   },
   {
-    path: '/test',
-    name: 'Test',
-    component: () => import(/* webpackChunkName: "test" */ '../views/Test.vue')
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/callback',
+    name: 'Callback',
+    component: Callback
   }
 ]
 

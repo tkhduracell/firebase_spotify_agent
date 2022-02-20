@@ -56,16 +56,15 @@ import { PlaylistDatabase } from '@/playlists'
 import { asyncComputed } from '@vueuse/core'
 import { sortBy, groupBy, range, max, min } from 'lodash'
 import { BarChart, useBarChart } from 'vue-chart-3'
-import { useSpotifyAuth, useSpotifyClient } from '@/auth'
+import { useSpotifyClient } from '@/auth'
 import { usePlaybackState } from '@/playing'
 
 export default defineComponent({
   name: 'PlaylistInspect',
   components: { BarChart },
   setup (props, { root: { $route } }) {
-    const { reauth } = useSpotifyAuth($route, false)
     const { client } = useSpotifyClient()
-    const { state } = usePlaybackState(client, reauth)
+    const { state } = usePlaybackState(client)
 
     const tracks = new TrackDatabase(client)
     const playlists = new PlaylistDatabase(client)

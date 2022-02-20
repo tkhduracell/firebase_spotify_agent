@@ -48,7 +48,7 @@
 
           </b-row>
 
-          <b-row align-v="center" align-h="center" class="device mb-3"  v-if="playback.device">
+          <b-row align-v="center" align-h="center" class="device mb-3"  v-if="playback && playback.device">
             <b-col cols="12" v-if="thisDevice && playback.device.id !== thisDevice.id">
               <small><b-link @click="playHere" href="#">Play here instead</b-link></small>
             </b-col>
@@ -135,16 +135,6 @@
         <b-button variant="primary" href="/" class="w-100">Login me in again!</b-button>
       </b-card>
     </b-row>
-    <b-row v-else>
-      <b-col class="mt-4" offset="3" cols="6">
-        <StartSceen
-          :presets="presets"
-          :devices="devices ? devices.devices : undefined"
-          @play="play($event.id, $event.device)"
-          @devices:reload="loadDevices"
-        />
-      </b-col>
-    </b-row>
 
     <div class="clock">{{ hhmm }}</div>
     <EditModal v-if="current" :track="current" @update:track="updateTrackInfo" @skip:track="playNext" />
@@ -175,9 +165,10 @@ import { QueueState, SpotifyApi } from '@/types'
 import { useHotKeys } from '@/hotkeys'
 import { usePresets } from '@/presets'
 import { useUserState } from '@/state'
-import { useSpotifyAuth, useSpotifyClient } from '@/auth'
+import { useSpotifyClient } from '@/auth'
 import { usePlaybackState } from '@/playing'
 import { sleep } from '@/sleep'
+import { useThrottleFn } from '@vueuse/core'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -207,7 +198,6 @@ function usePersistedSettings (defaults: Settings) {
 }
 
 export default defineComponent({
-  name: 'Home',
   components: {
     PlaybackLimiter,
     PlaybackAutoQueuer,
@@ -220,9 +210,8 @@ export default defineComponent({
     SelectSongModal,
     DeviceIcon
   },
-  setup (props, { root: { $root, $route } }) {
+  setup (props, { root: { $root, $router } }) {
     const userState = useUserState()
-    const { reauth } = useSpotifyAuth($route, false)
 
     const historyItems = ref<TrackWithBPM[]>([])
     const context = ref<SpotifyApi.PlaylistObjectSimplified>()
@@ -253,7 +242,7 @@ export default defineComponent({
     const { client } = useSpotifyClient()
 
     const clock = useClock()
-    const devices = useDevices(client)
+    const devices = useDevices()
     const { startFadeDown, startFadeUp, fading } = useVolume(client)
 
     const playlists = new PlaylistDatabase(client)
@@ -263,7 +252,13 @@ export default defineComponent({
       return playback.value?.device?.id ? { device_id: playback.value.device.id } : {}
     }
 
-    const { state, playback, secondsPlayed, secondsTotal } = usePlaybackState(client, reauth)
+    const { state, playback, secondsPlayed, secondsTotal } = usePlaybackState(client)
+
+    watch(() => state.value, (p) => {
+      if (!p || (!p?.is_playing && !p?.item)) {
+        $router.push({ name: 'Start' })
+      }
+    })
 
     const secondsMax = computed(() => {
       return settings.timeLimitEnabled ? Math.min(settings.timeLimitSeconds, secondsTotal.value) : secondsTotal.value
@@ -285,13 +280,11 @@ export default defineComponent({
           const item = state.value?.item!
           if (settings.autoQueueEnabled && queue.track && queue.track?.id !== id && queue.sent) {
             console.warn(
-              '[Queue] New played item was not as queued, expected: \n',
-              `${queue.track.title} (${queue.track.id})`,
-              'got:\n',
-              `${item.name} (${item.id})\n`,
-              'Skipping to next!'
+              '[Queue] New played item was not as queued',
+              { expected: `${queue.track.title} (${queue.track.id})`, actual: `${item.name} (${item.id})` },
+              'Would skip to next!?!'
             )
-            await client.skipToNext(devOpts())
+            // await client.skipToNext(devOpts())
           }
           queue.sent = false
           historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 5)
@@ -329,6 +322,7 @@ export default defineComponent({
     )
 
     const isCurrentWithinRange = computed(() => {
+      if (fading.fadedown || fading.fadeup) return true
       const min = settings.autoQueueTarget
       const max = settings.autoQueueTarget + settings.autoQueueRange
       if (settings.autoClimbEnabled) {
@@ -359,7 +353,7 @@ export default defineComponent({
     watch(
       [playlist, current, toRef(settings, 'autoQueueTarget'), toRef(settings, 'autoQueueRange'), toRef(settings, 'autoQueueEnabled')],
       async source => {
-        const [p, , target, range, enabled] = source as [TrackWithBPM[], TrackWithBPM, number, number, boolean]
+        const [p, c, target, range, enabled] = source as [TrackWithBPM[], TrackWithBPM, number, number, boolean]
         if (enabled && p.length > 0) {
           queue.loading = true
           const matching = p.filter(t => isWithin(t.bpm, target, target + range))
@@ -382,12 +376,17 @@ export default defineComponent({
       return (cpr.progress_ms ?? 0) > seconds * 1000
     }
 
+    const throttledSkip = useThrottleFn(() => {
+      console.log('[Skip] Skipping to next song')
+      return client.skipToNext(devOpts())
+    }, 5000)
+
     watch(state, async s => {
       if (!s) return
 
       if (settings.timeLimitEnabled && passed(s, settings.timeLimitSeconds)) {
-        console.log('[Skip] Skipping to next song')
-        await client.skipToNext(devOpts())
+        await throttledSkip()
+
         setTimeout(() => {
           // Execute auto-step
           if (settings.autoQueueEnabled && settings.autoClimbEnabled) {
@@ -462,6 +461,7 @@ export default defineComponent({
     async function playTrack (track: TrackWithBPM) {
       settings.timeLimitEnabled = false
       settings.autoFadeEnabled = false
+      queue.track = track
 
       console.log('[Skip]: Queuing: ', track.title)
       await client.queue(`spotify:track:${track.id}`, devOpts())

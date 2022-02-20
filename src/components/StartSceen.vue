@@ -1,16 +1,5 @@
 <template>
   <div>
-    <b-row>
-      <b-col cols="3">
-        <b-img fluid src="favicon2.svg" />
-      </b-col>
-      <b-col cols="9" align-self="center">
-        <h1>Welcome to Spotify Agent!</h1>
-        <p>
-          This is a music tool written to ease Spotify playback during dance traning.
-        </p>
-      </b-col>
-    </b-row>
     <h1 class="mt-4">What do you want to play?</h1>
     <div class="playlists">
 

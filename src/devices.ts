@@ -1,8 +1,11 @@
 import { useSpotifyState } from './state'
 import { computed, onMounted, ref, watch } from '@vue/composition-api'
 import SpotifyWebApi from 'spotify-web-api-js'
+import { useSpotifyClient } from './auth'
+import { useInterval } from 'vue-composable'
 
-export function useDevices (client: SpotifyWebApi.SpotifyWebApiJs) {
+export function useDevices () {
+  const { client } = useSpotifyClient()
   const devices = ref<SpotifyApi.UserDevicesResponse>()
 
   async function loadDevices () {
