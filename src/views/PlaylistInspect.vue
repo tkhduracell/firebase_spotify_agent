@@ -9,7 +9,19 @@
         <b-form>
           <b-form-row>
             <b-col cols="6">
-              <b-form-input type="text" v-model="playlist.url" />
+              <b-row class="no-gutters">
+                <b-col>
+                  <b-form-input type="text" v-model="playlist.url" />
+                </b-col>
+                <b-col cols="auto">
+                  <b-button @click="reload" variant="primary">
+                    <b-icon-arrow-clockwise />
+                  </b-button>
+                </b-col>
+              </b-row>
+            </b-col>
+            <div class="w-100" />
+            <b-col cols="6">
               <b-form-checkbox v-model="sorted" class="mt-1" v-if="playlist.url">
                 Sort by tempo?
               </b-form-checkbox>
@@ -19,7 +31,7 @@
       </b-col>
     </b-row>
     <b-row class="mt-3" v-if="playlist.url">
-      <b-col cols="12" md="12" v-if="loading.info || !playlist.info">
+      <b-col cols="6" md="6" v-if="loading.info || !playlist.info">
         <b-spinner />
       </b-col>
       <b-col cols="12" md="6" v-else>
@@ -71,11 +83,15 @@ export default defineComponent({
       // eslint-disable-next-line no-debugger
       if (typeof track.bpm !== 'number') debugger
       const prefix = showBPM ? track.bpm.toFixed() + ' bpm - ' : ''
-      return `${prefix}${track.artist} - ${track.title}`
+      return `${prefix}${track.artist} - ${track.title}`.slice(0, 50)
     }
 
     const tracks = new TrackDatabase(client)
     const playlists = new PlaylistDatabase(client)
+    const force = ref(1)
+    function reload () {
+      force.value = new Date().getTime()
+    }
 
     const playlistUrl = useSessionStorage('playlist-url', '')
     const playlistId = computed(() =>
@@ -94,11 +110,11 @@ export default defineComponent({
     })
 
     const loadingInfo = ref(false)
-    const playlistInfo = asyncComputed(() => (playlistId.value ? client.getPlaylist(playlistId.value) : undefined), undefined, loadingInfo)
+    const playlistInfo = asyncComputed(() => (force.value && playlistId.value ? client.getPlaylist(playlistId.value) : undefined), undefined, loadingInfo)
 
     const loadingTracks = ref(false)
     const playlistTracksUnordered = asyncComputed(
-      () => (playlistId.value ? playlists.getPlaylistTracks(playlistId.value).then(tracks.getTracksWithTempo.bind(tracks)) : []),
+      () => (force.value && playlistId.value ? playlists.getPlaylistTracks(playlistId.value).then(tracks.getTracksWithTempo.bind(tracks)) : []),
       [],
       loadingTracks
     )
@@ -129,7 +145,7 @@ export default defineComponent({
       }
 
       const buckets: [string, number][] = sortBy(
-        Object.entries(groups).map(([group, t]) => [group, t.length]),
+        Object.entries(groups).map(([group, t]) => [parseInt(group) + '-' + (parseInt(group) + 10), t.length]),
         ([k]) => parseInt(k)
       )
       return buckets
@@ -204,6 +220,7 @@ export default defineComponent({
     return {
       tracks,
       play,
+      reload,
       loading: reactive({
         info: loadingInfo,
         tracks: loadingTracks
