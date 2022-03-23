@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, reactive } from '@vue/composition-api'
+import { onMounted, onUnmounted, reactive, ref } from '@vue/composition-api'
 import { createGlobalState } from '@vueuse/core'
 import SpotifyWebApi from 'spotify-web-api-js'
 import { useInterval } from 'vue-composable'
@@ -26,14 +26,19 @@ export function useSpotifyRedirect (
 
   const { start, remove } = useInterval(onRefresh ? () => onRefresh() : () => null, 1000)
 
-  onUnmounted(remove)
+  const ready = ref(false)
+
+  onUnmounted(() => {
+    ready.value = true
+    remove()
+  })
 
   onMounted(async () => {
     if ($route.hash.includes('access_token')) {
       const params = new URLSearchParams($route.hash.replace(/^#/gim, ''))
       const token = params.get('access_token')
       client.setAccessToken(token)
-
+      ready.value = true
       if (onInit) {
         await onInit()
       }
@@ -44,10 +49,11 @@ export function useSpotifyRedirect (
   })
 
   function reauth () {
+    ready.value = false
     document.location = authUrl
   }
 
-  return { client, reauth }
+  return { client, ready, reauth }
 }
 
 const spotifyUser = createGlobalState(() =>

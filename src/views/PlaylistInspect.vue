@@ -10,7 +10,7 @@
           <b-form-row>
             <b-col cols="6">
               <b-form-input type="text" v-model="playlist.url" />
-              <b-form-checkbox v-model="sorted" class="mt-1">
+              <b-form-checkbox v-model="sorted" class="mt-1" v-if="playlist.url">
                 Sort by tempo?
               </b-form-checkbox>
             </b-col>
@@ -18,12 +18,14 @@
         </b-form>
       </b-col>
     </b-row>
-    <b-row class="mt-3">
-      <b-col order="1" cols="12" md="12" offset-md="0" lg="6" order-lg="1" v-if="loading.info || !playlist.info">
+    <b-row class="mt-3" v-if="playlist.url">
+      <b-col cols="12" md="12" v-if="loading.info || !playlist.info">
         <b-spinner />
       </b-col>
-      <b-col order="1" cols="12" md="12" offset-md="0" lg="6" order-lg="1" v-else>
+      <b-col cols="12" md="6" v-else>
         <h2 v-text="playlist.info.name" />
+        <b-img :src="(playlist.info.images.find(() => true) || {}).url" height="200" />
+
         <p v-if="playlist.tracks.length > 0" v-text="`${playlist.tracks.length} songs`" />
         <p v-if="playlist.info.description" v-text="playlist.info.description" class="small" />
 
@@ -31,27 +33,30 @@
         <div v-if="playlist.tracks.length > 0">
           <div v-for="(t, idx) in playlist.tracks" :key="idx + t.id">
             <div class="row">
-              <b-link @click="play(t)" v-text="trackFormat(t, true)" class="col-12 text-truncate" />
+              <div class="col-12">
+                <b-progress :value="t.bpm - playlistStats.min" :max="playlistStats.max - playlistStats.min" :variant="variant(t.bpm)" class="bpmbar" />
+                <b-link @click="play(t)" v-text="trackFormat(t, true)" class="text-truncate" />
+              </div>
             </div>
           </div>
         </div>
       </b-col>
-      <b-col order="0" cols="12" sm="8" offset-sm="2" md="8" offset-md="2" lg="6" order-lg="2" offset-lg="0" xl="4" class="">
+      <b-col cols="12" md="5" class="mt-2" v-if="playlist.info">
         <h2>Tracks per tempo</h2>
-        <Chart :options="playlist.chartoptions" :chartData="playlist.chart" />
+        <Chart :options="playlist.chartoptions" :chartData="playlist.chart" v-if="playlist.chart && playlist.chartoptions" />
       </b-col>
     </b-row>
   </b-container>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, ref } from '@vue/composition-api'
+import { computed, defineComponent, reactive, ref, watch } from '@vue/composition-api'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { useSpotifyRedirect } from '@/auth'
 import { PlaylistDatabase } from '@/playlists'
 
-import { asyncComputed } from '@vueuse/core'
+import { asyncComputed, useSessionStorage } from '@vueuse/core'
 import { sortBy, groupBy, range, max, min } from 'lodash'
 import Chart from '@/components/Chart.vue'
 
@@ -60,7 +65,7 @@ export default defineComponent({
   components: { Chart },
   setup (props, { root: { $route } }) {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client } = useSpotifyRedirect($route, onReady)
+    const { client, ready } = useSpotifyRedirect($route, onReady)
 
     function trackFormat (track: TrackWithBPM, showBPM = false): string {
       // eslint-disable-next-line no-debugger
@@ -72,15 +77,21 @@ export default defineComponent({
     const tracks = new TrackDatabase(client)
     const playlists = new PlaylistDatabase(client)
 
-    const playlistUrl = ref('')
+    const playlistUrl = useSessionStorage('playlist-url', '')
     const playlistId = computed(() =>
-      playlistUrl.value
+      ready.value && playlistUrl.value
         ? playlistUrl.value
+          .trim()
+          .replace(/\?.*$/gi, '')
           .split('/')
           .slice(-1)
           .find(() => true) ?? ''
         : ''
     )
+
+    watch(playlistUrl, () => {
+      playlistUrl.value = playlistUrl.value.replace(/\?.*$/gi, '')
+    })
 
     const loadingInfo = ref(false)
     const playlistInfo = asyncComputed(() => (playlistId.value ? client.getPlaylist(playlistId.value) : undefined), undefined, loadingInfo)
@@ -92,11 +103,17 @@ export default defineComponent({
       loadingTracks
     )
 
-    const sorted = ref(true)
+    const sorted = ref(false)
     const playlistTracks = computed(() => {
       return sorted.value ? sortBy(playlistTracksUnordered.value, t => t.bpm) : playlistTracksUnordered.value
     })
-
+    const playlistStats = computed(() => {
+      const bpms = playlistTracksUnordered.value.map(t => t.bpm)
+      return {
+        max: max(bpms) ?? 200,
+        min: min(bpms) ?? 60
+      }
+    })
     const playlistTempoHistorgram = computed(() => {
       const groups = groupBy(
         playlistTracksUnordered.value.filter(t => t.bpm > 0),
@@ -107,7 +124,6 @@ export default defineComponent({
 
       if (minBPM && maxBPM) {
         for (const i of range(minBPM, maxBPM + 10, 10)) {
-          console.log(i, minBPM, maxBPM)
           groups[`${i}`] = groups[`${i}`] ?? []
         }
       }
@@ -162,6 +178,15 @@ export default defineComponent({
       }
     })
 
+    function variant (bpm: number) {
+      if (bpm < 80) return 'danger'
+      if (bpm < 100) return 'warning'
+
+      if (bpm > 148) return 'warning'
+      if (bpm > 172) return 'danger'
+      return 'success'
+    }
+
     async function play (track: TrackWithBPM) {
       await client.queue('spotify:track:' + track.id)
       setTimeout(async () => {
@@ -171,7 +196,7 @@ export default defineComponent({
 
     async function onReady () {
       const state = await client.getMyCurrentPlaybackState()
-      if (state.context?.type === 'playlist') {
+      if (state.context?.type === 'playlist' && !playlistUrl.value) {
         playlistUrl.value = state.context.external_urls?.spotify ?? ''
       }
     }
@@ -219,10 +244,18 @@ export default defineComponent({
         }
       }),
       trackFormat,
-      sorted
+      variant,
+      sorted,
+      playlistStats
     }
   }
 })
 </script>
 
-<style lang="scss"></style>
+<style lang="scss">
+.bpmbar {
+  width: 100px;
+  float: left;
+  margin: 0.2em 0.4em;
+}
+</style>
