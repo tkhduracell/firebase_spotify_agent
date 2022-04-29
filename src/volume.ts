@@ -1,8 +1,8 @@
 import { reactive } from '@vue/composition-api'
 
-import SpotifyWebApi from 'spotify-web-api-js'
+import { SpotifyPlayerProxy } from './player-proxy'
 
-export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
+export function useVolume (player: SpotifyPlayerProxy) {
   const fading = reactive({
     fadedown: false,
     fadeup: false,
@@ -14,14 +14,14 @@ export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
       if (fading.fadedown && !fading.fadeup) {
         const p = fading.volume
         if (p) {
-          console.debug('[Fade] Starting to fade up from 0 ->', p)
+          console.info('[Fade] Starting to fade up from 0 ->', p)
           for (let i = 1; i < 9; i++) {
-            setTimeout(() => client.setVolume(Math.round(p * (i / 10) + 0.1), options), (i - 1) * 300)
+            setTimeout(() => player.setVolume(Math.round(p * (i / 10) + 0.1), options), (i - 1) * 300)
           }
           setTimeout(() => {
             // 0.1 = 0 / 10 + c
             resolve(
-              client.setVolume(p).finally(() => {
+              player.setVolume(p, options).finally(() => {
                 fading.fadeup = false
                 fading.fadedown = false
               })
@@ -43,11 +43,11 @@ export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
       if (!fading.fadedown) {
         const p = (fading.volume = currentVolume)
         if (p) {
-          console.debug('[Fade] Starting to fade down from', p, '->', 0)
+          console.info('[Fade] Starting to fade down from', p, '->', 0)
           for (let i = 1; i < 9; i++) {
-            setTimeout(() => client.setVolume(Math.round(p * (1 - i / 10)), options), (i - 1) * 300)
+            setTimeout(() => player.setVolume(Math.round(p * (1 - i / 10)), options), (i - 1) * 300)
           }
-          setTimeout(() => resolve(client.setVolume(0, options)), 300 * 9)
+          setTimeout(() => resolve(player.setVolume(0, options)), 300 * 9)
 
           fading.fadedown = true
         } else {

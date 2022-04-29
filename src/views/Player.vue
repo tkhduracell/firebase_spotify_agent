@@ -71,9 +71,9 @@
           <PlaybackAutoFade
             :enabled="settings.autoFadeEnabled"
             @update:enabled="settings.autoFadeEnabled = $event"
-            :volume="playback.device.volume_percent || 0"
+            :volume="volume || 0"
             :is-fading="fading.fadedown || fading.fadeup"
-            @update:volume="updateVolume"
+            @update:volume="setVolumeDelta"
             v-if="playback"
             class="mb-2"
           />
@@ -156,7 +156,7 @@ import EditModal from '@/components/EditModal.vue'
 import SelectSongModal from '@/components/SelectSongModal.vue'
 import DeviceIcon from '@/components/DeviceIcon.vue'
 
-import { TrackWithBPM, TrackDatabase, trackFormat } from '@/tracks'
+import { TrackWithBPM, TrackDatabase, trackFormat, toSimple } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
 import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
@@ -169,6 +169,7 @@ import { useSpotifyClient } from '@/auth'
 import { usePlaybackState } from '@/playing'
 import { sleep } from '@/sleep'
 import { useThrottleFn } from '@vueuse/core'
+import { usePlayer } from '@/player'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -235,24 +236,33 @@ export default defineComponent({
       autoQueueRange: 6,
       autoClimbEnabled: false,
       autoClimbMin: 120,
-      autoClimbMax: 180,
+      autoClimbMax: 240,
       autoClimbStep: 5
     })
 
     const { client } = useSpotifyClient()
+    const { player } = usePlayer()
 
     const clock = useClock()
     const devices = useDevices()
-    const { startFadeDown, startFadeUp, fading } = useVolume(client)
 
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
 
-    function devOpts () {
-      return playback.value?.device?.id ? { device_id: playback.value.device.id } : {}
-    }
+    const dev = computed(() => playback.value?.device?.id ? { device_id: playback.value.device.id } : {})
 
-    const { state, playback, secondsPlayed, secondsTotal } = usePlaybackState(client)
+    const { state, playback, secondsPlayed, secondsTotal, volume, setVolume, setVolumeThrottled } = usePlaybackState(client)
+    const { startFadeDown, startFadeUp, fading } = useVolume(player)
+
+    function setVolumeDelta (delta: number) {
+      if (volume.value !== undefined && volume.value !== null) {
+        const vol = volume.value + delta
+        const clamped = Math.min(100, Math.max(vol, 0))
+        setVolume(clamped)
+        setVolumeThrottled(clamped)
+        player.setVolume(clamped)
+      }
+    }
 
     watch(() => state.value, (p) => {
       if (!p || (!p?.is_playing && !p?.item)) {
@@ -284,7 +294,7 @@ export default defineComponent({
               { expected: `${queue.track.title} (${queue.track.id})`, actual: `${item.name} (${item.id})` },
               'Would skip to next!?!'
             )
-            // await client.skipToNext(devOpts())
+            await client.skipToNext(dev.value)
           }
           queue.sent = false
           historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 5)
@@ -350,22 +360,26 @@ export default defineComponent({
       return undefined
     }
 
-    watch(
-      [playlist, current, toRef(settings, 'autoQueueTarget'), toRef(settings, 'autoQueueRange'), toRef(settings, 'autoQueueEnabled')],
-      async source => {
-        const [p, c, target, range, enabled] = source as [TrackWithBPM[], TrackWithBPM, number, number, boolean]
-        if (enabled && p.length > 0) {
-          queue.loading = true
-          const matching = p.filter(t => isWithin(t.bpm, target, target + range))
-          queue.pool = matching.length
+    function computeNextTrack (playlist: TrackWithBPM[], base: number, range: number) {
+      queue.loading = true
+      const matching = playlist.filter(t => isWithin(t.bpm, base, base + range))
+      queue.pool = matching.length
 
-          if (matching.length > 0) {
-            queue.track = getRandomUnplayed(matching)
-            console.log('[Queue] Computed track for queuing', queue.track?.title, queue.track?.bpm)
-          } else {
-            console.warn('[Queue] No track to queue given', target, '⌥', range)
-          }
-          queue.loading = false
+      if (matching.length > 0) {
+        queue.track = getRandomUnplayed(matching)
+        console.log('[Queue] Computed track for queuing', queue.track?.title, queue.track?.bpm)
+      } else {
+        console.warn('[Queue] No track to queue given', base, '⌥', range)
+      }
+      queue.loading = false
+    }
+
+    watch(
+      [playlist, toRef(settings, 'autoQueueTarget'), toRef(settings, 'autoQueueRange'), toRef(settings, 'autoQueueEnabled')],
+      async source => {
+        const [pl, autoQueueTarget, autoQueueRange, autoQueueEnabled] = source as [TrackWithBPM[], number, number, boolean]
+        if (autoQueueEnabled && pl.length > 0) {
+          computeNextTrack(pl, autoQueueTarget, autoQueueRange)
         } else {
           queue.track = undefined
         }
@@ -378,57 +392,66 @@ export default defineComponent({
 
     const throttledSkip = useThrottleFn(() => {
       console.log('[Skip] Skipping to next song')
-      return client.skipToNext(devOpts())
+      return player.nextTrack(dev.value)
     }, 5000)
+
+    // Log playback on track id change
+    watch(() => state.value?.item?.id, s => console.log('[Playback] Now playing track', state.value?.item?.name))
+
+    // Compute new queue
+    watch(() => state.value?.item?.id, s => {
+      computeNextTrack(playlist.value, settings.autoQueueTarget, settings.autoQueueRange)
+    })
+
+    // Execute auto-step on track id change
+    watch(() => state.value?.item?.id, s => {
+      if (settings.autoQueueEnabled && settings.autoClimbEnabled) {
+        const prev = settings.autoQueueTarget
+        const newTarget = settings.autoQueueTarget + settings.autoClimbStep
+        if (newTarget > settings.autoClimbMax) {
+          settings.autoQueueTarget = settings.autoClimbMin
+        } else {
+          settings.autoQueueTarget = newTarget
+        }
+        console.log('[AutoStep] Change tempo target', prev, '->', settings.autoQueueTarget)
+      }
+    })
 
     watch(state, async s => {
       if (!s) return
 
       if (settings.timeLimitEnabled && passed(s, settings.timeLimitSeconds)) {
-        await throttledSkip()
-
-        setTimeout(() => {
-          // Execute auto-step
-          if (settings.autoQueueEnabled && settings.autoClimbEnabled) {
-            const newTarget = settings.autoQueueTarget + settings.autoClimbStep
-            if (newTarget > settings.autoClimbMax) {
-              settings.autoQueueTarget = settings.autoClimbMin
-            } else {
-              settings.autoQueueTarget = newTarget
-            }
-          }
-        }, 2000)
+        throttledSkip()
       }
 
       if (settings.autoQueueEnabled && passed(s, secondsMax.value - 10)) {
         if (queue.track && !queue.sent) {
           console.log('[Queue] Add track to queue:', queue.track.title, queue.track.bpm)
-          await client.queue(`spotify:track:${queue.track.id}`, devOpts())
+          await client.queue(`spotify:track:${queue.track.id}`, dev.value)
           queue.sent = true
         }
       }
 
       if (settings.autoFadeEnabled && passed(s, secondsMax.value - 3)) {
-        startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
+        startFadeDown(playback.value?.device.volume_percent ?? undefined, dev.value)
       }
 
       if (settings.autoFadeEnabled && !passed(s, 4)) {
-        startFadeUp(devOpts())
+        startFadeUp(dev.value)
       }
     })
 
     async function play (context_uri?: string, device?: SpotifyApi.UserDevice) {
-      const dev = device && device.id ? { device_id: device.id } : {}
       if (context_uri && typeof context_uri === 'string') {
-        await client.play({ context_uri, ...dev })
+        await client.play({ context_uri, ...dev.value })
         try {
-          await client.setShuffle(true, { ...dev })
+          await client.setShuffle(true, dev.value)
         } catch (e) {
           for (let i = 0; i < 10; i++) {
             await sleep(500)
             if (!playback.value?.device.is_restricted) {
               try {
-                await client.setShuffle(true, { ...dev })
+                await client.setShuffle(true, dev.value)
                 await sleep(100)
                 break
               } catch (e) {}
@@ -436,9 +459,9 @@ export default defineComponent({
           }
         }
       } else if (state.value && state.value.is_playing) {
-        await client.pause({ ...dev })
+        await player.pause(dev.value)
       } else {
-        await client.play({ ...dev })
+        await player.resume(dev.value)
       }
     }
 
@@ -446,16 +469,16 @@ export default defineComponent({
       if (settings.autoQueueEnabled && queue.track && !queue.sent) {
         await playTrack(queue.track)
       } else {
-        await client.skipToNext(devOpts())
+        await player.nextTrack(dev.value)
       }
     }
 
     async function playPrev () {
-      await client.skipToPrevious(devOpts())
+      await player.previousTrack(dev.value)
     }
 
     async function playAgain () {
-      await client.seek(0, devOpts())
+      await client.seek(0, dev.value)
     }
 
     async function playTrack (track: TrackWithBPM) {
@@ -464,23 +487,17 @@ export default defineComponent({
       queue.track = track
 
       console.log('[Skip]: Queuing: ', track.title)
-      await client.queue(`spotify:track:${track.id}`, devOpts())
+      await client.queue(`spotify:track:${track.id}`, dev.value)
       queue.sent = true
 
       console.log('[Skip]: Fade out!')
-      await startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
+      await startFadeDown(playback.value?.device.volume_percent ?? undefined, dev.value)
 
       console.log('[Skip]: Skipping to queued item!')
-      await client.skipToNext(devOpts())
+      await player.nextTrack(dev.value)
 
       settings.autoFadeEnabled = true
       settings.timeLimitEnabled = true
-    }
-
-    async function updateVolume (vol: number) {
-      if (vol !== null && vol !== undefined) {
-        await client.setVolume(Math.max(0, Math.min(100, vol)), devOpts())
-      }
     }
 
     async function playHere () {
@@ -499,10 +516,10 @@ export default defineComponent({
       keyn: () => playNext(),
       keyp: () => playPrev(),
       keyr: () => playAgain(),
-      home: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 20),
-      pageup: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 5),
-      end: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 20),
-      pagedown: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 5)
+      home: () => setVolumeDelta(20),
+      pageup: () => setVolumeDelta(5),
+      end: () => setVolumeDelta(0 - 20),
+      pagedown: () => setVolumeDelta(0 - 5)
     })
 
     const { playlists: presets } = usePresets()
@@ -533,10 +550,11 @@ export default defineComponent({
       playback,
       fading,
       isCurrentWithinRange,
-      updateVolume,
+      setVolumeDelta,
       updateTrackInfo,
       canEdit: computed(() => !!userState.id),
-      presets
+      presets,
+      volume
     }
   }
 })

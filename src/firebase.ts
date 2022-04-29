@@ -1,10 +1,9 @@
 import { useUserState } from './state'
 import { onMounted, onUnmounted } from '@vue/composition-api'
-import { initializeApp } from 'firebase/app'
 
-import { getAuth, GoogleAuthProvider, signInWithPopup, Unsubscribe } from 'firebase/auth'
-
-import { getFirestore } from 'firebase/firestore'
+import { initializeApp } from '@firebase/app'
+import { getAuth, GoogleAuthProvider, signInWithPopup, Unsubscribe } from '@firebase/auth'
+import { getFirestore } from '@firebase/firestore'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAsSsYfHVML9a5Jc0F7kc7sLfXY9nJyG4o',

@@ -10,7 +10,7 @@
           size="small"
           class="d-inline"
           :disabled="isFading || volume <= 0"
-          @click="$emit('update:volume', Math.max(volume - 10, 0))"
+          @click="$emit('update:volume', 0 - 10)"
         >
           <b-icon-dash />
         </b-button>
@@ -31,7 +31,7 @@
           size="small"
           class="d-inline"
           :disabled="isFading || volume >= 100"
-          @click="$emit('update:volume', Math.min(volume + 10, 100))"
+          @click="$emit('update:volume', 10)"
         >
           <b-icon-plus />
         </b-button>
@@ -68,8 +68,6 @@ export default defineComponent({
   }
   .label.last {
     width: 2em;
-  }
-  .check-button {
   }
   .bar .progress-bar {
     font-weight: bold;

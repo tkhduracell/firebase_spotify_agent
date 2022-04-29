@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <b-container>
         <b-row align-h="center">
             <b-col cols="auto">
                 <b-img fluid src="favicon2.svg" />
@@ -31,7 +31,7 @@
                 </div>
             </b-col>
         </b-row>
-    </div>
+    </b-container>
 </template>
 
 <script lang="ts">
@@ -57,9 +57,8 @@ export default defineComponent({
     useInterval(loadDevices, 2000)
 
     watch(() => state.token, async (t) => {
-      if (t?.access_token && !t.expierd() && state.player) {
-        const p = state.player
-        await p.setVolume(0)
+      if (t?.access_token && !t.expierd() && state.player_sdk) {
+        await state.player_sdk.setVolume(0)
         console.log('Volume set 0')
       }
     })
