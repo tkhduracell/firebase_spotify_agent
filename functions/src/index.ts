@@ -5,7 +5,7 @@ import * as cookieParser from "cookie-parser";
 import fetch from "node-fetch";
 import * as crypto from "crypto";
 
-// functions.logger.info("Hello logs!", {structuredData: true});
+require("firebase-functions/lib/logger/compat");
 
 const client_id = process.env.CLIENT_ID ?? "";
 const client_secret = process.env.CLIENT_SECRET ?? "";
@@ -71,6 +71,7 @@ app.get("/callback", async function(req, res) {
     const storedState = req.cookies ? req.cookies[state_key] : null;
     const page = req.cookies ? req.cookies[page_key] : null;
 
+    console.warn({ actual: state, expected: storedState })
     if (state === null || state !== storedState) {
         res.redirect(redirect_uri + "?" + stringify({error: "state_mismatch"}));
     } else {
