@@ -8,7 +8,6 @@ export function useHotKeys ($root: Vue, keys: KeyMap) {
   function onKeyPress (e: Event) {
     if (e.target instanceof Element && e.target.nodeName === 'INPUT') return
     if (e instanceof KeyboardEvent) {
-      console.log(e.code.toLowerCase())
       if (e.code.toLowerCase() in keys) {
         keys[e.code.toLowerCase()]()
       }
