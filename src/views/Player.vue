@@ -249,7 +249,7 @@ export default defineComponent({
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
 
-    const dev = computed(() => playback.value?.device?.id ? { device_id: playback.value.device.id } : {})
+    const dev = computed(() => playback.value?.device?.id ? { device_id: playback.value.device.id } : undefined)
 
     const { state, playback, secondsPlayed, secondsTotal, volume, setVolume, setVolumeThrottled } = usePlaybackState(client)
     const { startFadeDown, startFadeUp, fading } = useVolume(player)
@@ -260,7 +260,7 @@ export default defineComponent({
         const clamped = Math.min(100, Math.max(vol, 0))
         setVolume(clamped)
         setVolumeThrottled(clamped)
-        player.setVolume(clamped)
+        player.setVolume(clamped, dev.value)
       }
     }
 
@@ -288,15 +288,6 @@ export default defineComponent({
         if (id) {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-non-null-asserted-optional-chain
           const item = state.value?.item!
-          if (settings.autoQueueEnabled && queue.track && queue.track?.id !== id && queue.sent) {
-            console.warn(
-              '[Queue] New played item was not as queued',
-              { expected: `${queue.track.title} (${queue.track.id})`, actual: `${item.name} (${item.id})` },
-              'Would skip to next!?!'
-            )
-            await client.skipToNext(dev.value)
-          }
-          queue.sent = false
           historyItems.value = [await tracks.getTrackWithTempo(item.id), ...historyItems.value].slice(0, 5)
           current.value = await tracks.getTrackWithTempo(item.id)
         }
@@ -386,8 +377,8 @@ export default defineComponent({
       }
     )
 
-    function passed (cpr: SpotifyApi.CurrentlyPlayingResponse, seconds: number) {
-      return (cpr.progress_ms ?? 0) > seconds * 1000
+    function passed (progress_ms: number | undefined | null, seconds: number) {
+      return (progress_ms ?? 0) > seconds * 1000
     }
 
     const throttledSkip = useThrottleFn(() => {
@@ -417,31 +408,62 @@ export default defineComponent({
       }
     })
 
-    watch(state, async s => {
-      if (!s) return
+    // Trigges 10 sec before playback end
+    const switchSong = useThrottleFn(async () => {
+      console.log('[Player] Starting song switch')
 
-      if (settings.timeLimitEnabled && passed(s, settings.timeLimitSeconds)) {
-        throttledSkip()
-      }
-
-      if (settings.autoQueueEnabled && passed(s, secondsMax.value - 10)) {
-        if (queue.track && !queue.sent) {
+      // If queueing is enabled set next song
+      if (settings.autoQueueEnabled) {
+        if (queue.track) {
           console.log('[Queue] Add track to queue:', queue.track.title, queue.track.bpm)
           await client.queue(`spotify:track:${queue.track.id}`, dev.value)
           queue.sent = true
+        } else {
+          console.warn('[Queue] No track in queue to play')
         }
       }
 
-      if (settings.autoFadeEnabled && passed(s, secondsMax.value - 3)) {
-        startFadeDown(playback.value?.device.volume_percent ?? undefined, dev.value)
-      }
+      // Fade duration
+      const duration = 5000
+      console.log('[Player] Waiting for song end...')
+      await sleep(10000 - duration)
 
-      if (settings.autoFadeEnabled && !passed(s, 4)) {
-        startFadeUp(dev.value)
+      console.log('[Player] Starting fade down', volume.value)
+      const currentVolume = volume.value
+      await startFadeDown(currentVolume, duration, dev.value)
+
+      console.log('[Player] Skipping to next track')
+      await player.nextTrack(dev.value)
+
+      let retires = 0
+      const expected = queue.track?.id
+      while (true) {
+        const current = state.value?.item?.id
+        if (current === expected) {
+          break
+        }
+        await sleep(500)
+        retires++
+        if (retires > 14) {
+          console.warn('[Queue] Song was not correct!', { current, expected })
+          break
+        }
+      }
+      queue.sent = false
+
+      await startFadeUp(currentVolume, duration, dev.value)
+    }, 15000)
+
+    // Exectute playback seconds changes
+    watch(() => state.value?.progress_ms, (progress_ms) => {
+      if (!progress_ms && progress_ms !== 0) return
+
+      if (settings.timeLimitEnabled && passed(progress_ms, secondsMax.value - 10)) {
+        switchSong()
       }
     })
 
-    async function play (context_uri?: string, device?: SpotifyApi.UserDevice) {
+    async function play (context_uri?: string) {
       if (context_uri && typeof context_uri === 'string') {
         await client.play({ context_uri, ...dev.value })
         try {
@@ -490,11 +512,17 @@ export default defineComponent({
       await client.queue(`spotify:track:${track.id}`, dev.value)
       queue.sent = true
 
+      computeNextTrack(playlist.value, settings.autoQueueTarget, settings.autoQueueRange)
+
       console.log('[Skip]: Fade out!')
-      await startFadeDown(playback.value?.device.volume_percent ?? undefined, dev.value)
+      const vol = playback.value?.device.volume_percent ?? 0.5
+      await startFadeDown(vol, 3000, dev.value)
 
       console.log('[Skip]: Skipping to queued item!')
       await player.nextTrack(dev.value)
+
+      console.log('[Skip]: Fade in!')
+      await startFadeUp(vol, 5000, dev.value)
 
       settings.autoFadeEnabled = true
       settings.timeLimitEnabled = true

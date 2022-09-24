@@ -1,12 +1,12 @@
 import { computed, onMounted, onUnmounted, ref } from '@vue/composition-api'
-import { useThrottleFn } from '@vueuse/core'
+import { controlledComputed, useThrottleFn } from '@vueuse/core'
 import { useInterval } from 'vue-composable'
 import { SpotifyApi } from './types'
 
 export function usePlaybackState (client: SpotifyApi, rate = 1000) {
   const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
   const playback = ref<SpotifyApi.CurrentPlaybackResponse>()
-  const volume = ref<number>()
+  const volume = ref<number>(0.5)
 
   function setVolume (vol: number) {
     volume.value = vol
@@ -27,6 +27,9 @@ export function usePlaybackState (client: SpotifyApi, rate = 1000) {
         if (playbackStateResult.status === 'fulfilled') {
           playback.value = playbackStateResult.value
           const vol = playbackStateResult.value?.device?.volume_percent
+          if (vol) {
+            volume.value = vol
+          }
         }
       } catch (err) {
         console.error(err)

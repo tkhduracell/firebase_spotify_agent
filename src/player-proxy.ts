@@ -9,11 +9,17 @@ export class SpotifyPlayerProxy {
   private player: SpotifyPlayerSDK | null = null
 
   setPlayer (player: SpotifyPlayerSDK | null) {
+    console.log('Setting player', player)
     this.player = player
   }
 
   clearPlayer () {
+    console.log('Setting player', null)
     this.player = null
+  }
+
+  isFast () {
+    return !!this.player
   }
 
   constructor (client: SpotifyApi) {
@@ -21,9 +27,9 @@ export class SpotifyPlayerProxy {
   }
 
   async setVolume (vol: number, device?: DeviceOpts): Promise<void> {
-    const v = Math.max(Math.min(vol, 100), 0)
+    const v = parseInt(Math.max(Math.min(vol, 100), 0).toFixed(0))
     if (this.player) {
-      return this.player.setVolume(v)
+      return this.player.setVolume(v / 100)
     } else {
       return this.client.setVolume(v, device)
     }

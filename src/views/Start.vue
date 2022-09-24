@@ -22,10 +22,10 @@
             </b-col>
         </b-row>
         <b-row align-h="center" v-else>
-            <b-col cols=12 class="mt-5">
+            <b-col cols=12 class="mt-5 mb-5">
                 <div class="login">
                     <h3>First step is to login to your Spotify Account</h3>
-                    <b-button variant="primary" size="lg" :to="{ name: 'Login' }">
+                    <b-button variant="primary" size="lg" :to="{ name: 'Login' }" class="mt-2">
                         Log in to Spotify
                     </b-button>
                 </div>
@@ -71,10 +71,14 @@ export default defineComponent({
       play: async (context_uri: string, device?: SpotifyApi.UserDevice) => {
         const dev = device?.id ? { device_id: device.id } : {}
         console.log('Play', { context_uri, ...dev })
-        await client.play({ context_uri, ...dev })
         try {
-          await client.setShuffle(true, { ...dev })
-        } catch (e) {}
+          await client.play({ context_uri, ...dev })
+          try {
+            await client.setShuffle(true, { ...dev })
+          } catch (e) {}
+        } catch (e) {
+          console.error('Unable to play on device', dev)
+        }
         $router.push({ name: 'Player' })
       },
       presets: playlists
