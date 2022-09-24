@@ -15,7 +15,7 @@
           :disabled="!enabled"
           class="custom"
           min="80"
-          max="200"
+          max="300"
           step="5"
           size="lg"
           :value="target"
