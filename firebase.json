@@ -1,6 +1,7 @@
 {
   "hosting": {
     "public": "dist",
+    "target": "v2",
     "site": "spotify-agent",
     "ignore": [
       "firebase.json",

@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "filiplindqvist-com-ea66d"
-  }
+  },
+  "targets": {
+    "filiplindqvist-com-ea66d": {
+      "hosting": {
+        "v2": [
+          "spotify-agent-v2"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
