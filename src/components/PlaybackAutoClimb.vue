@@ -21,7 +21,7 @@
         ><b-form-spinbutton
           :disabled="!enabled || disabled"
           class="custom"
-          min="80"
+          min="60"
           :max="max - step"
           step="5"
           size="lg"
@@ -35,7 +35,7 @@
           :disabled="!enabled || disabled"
           class="custom"
           :min="min + step"
-          max="200"
+          max="280"
           step="5"
           size="lg"
           :value="max"
