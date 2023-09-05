@@ -13,7 +13,6 @@
       </b-col>
       <b-col class="label main mr-2" cols="auto">
         Auto climb
-        <span class="beta">BETA</span>
         <span class="help" v-b-tooltip.hover="'Automatically move between min and max as the target tempo'">
           <b-icon-question-circle-fill />
         </span>
