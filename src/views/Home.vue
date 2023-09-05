@@ -171,6 +171,7 @@ import { QueueState } from '@/types'
 import { useUser } from '@/firebase'
 import { useHotKeys } from '@/hotkeys'
 import { usePresets } from '@/presets'
+import { useThrottleFn } from '@vueuse/core'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -394,23 +395,27 @@ export default defineComponent({
       return (cpr.progress_ms ?? 0) > seconds * 1000
     }
 
+    const switchSong = useThrottleFn(async () => {
+      console.log('[Skip] Skipping to next song')
+      await client.skipToNext(devOpts())
+      setTimeout(() => {
+        // Execute auto-step
+        if (settings.autoQueueEnabled && settings.autoClimbEnabled) {
+          const newTarget = settings.autoQueueTarget + settings.autoClimbStep
+          if (newTarget > settings.autoClimbMax) {
+            settings.autoQueueTarget = settings.autoClimbMin
+          } else {
+            settings.autoQueueTarget = newTarget
+          }
+        }
+      }, 2000)
+    }, 20000, false, true)
+
     watch(state, async s => {
       if (!s) return
 
       if (settings.timeLimitEnabled && passed(s, settings.timeLimitSeconds)) {
-        console.log('[Skip] Skipping to next song')
-        await client.skipToNext(devOpts())
-        setTimeout(() => {
-          // Execute auto-step
-          if (settings.autoQueueEnabled && settings.autoClimbEnabled) {
-            const newTarget = settings.autoQueueTarget + settings.autoClimbStep
-            if (newTarget > settings.autoClimbMax) {
-              settings.autoQueueTarget = settings.autoClimbMin
-            } else {
-              settings.autoQueueTarget = newTarget
-            }
-          }
-        }, 2000)
+        await switchSong()
       }
 
       if (settings.autoQueueEnabled && passed(s, secondsMax.value - 10)) {
