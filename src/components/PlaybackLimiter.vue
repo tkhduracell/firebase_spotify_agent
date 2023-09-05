@@ -29,7 +29,7 @@
           :disabled="!enabled"
           size="lg"
           :step="5"
-          :min="Math.max(10.0 * Math.ceil(progress / 10.0) + 10, 30)"
+          :min="Math.max(10.0 * Math.ceil(progress / 10.0) + 10, 20)"
           :max="86400"
           :value="value"
           @change="$emit('update:value', Math.max(10.0 * Math.ceil(progress / 10.0) + 10, parseInt($event)))"
