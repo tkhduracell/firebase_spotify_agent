@@ -1,11 +1,7 @@
-.DS_Store
-node_modules
-/dist
-
-
-# local env files
-.env.local
-.env.*.local
+# Build files
+functions/lib/
+node_modules/
+dist/
 
 # Log files
 npm-debug.log*
@@ -16,8 +12,15 @@ pnpm-debug.log*
 # Editor directories and files
 .idea
 .vscode
+.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.cache
+
+# Environment files
+*.env
+*.env.development
+*.env.local
