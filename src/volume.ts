@@ -20,12 +20,10 @@ export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
           }
           setTimeout(() => {
             // 0.1 = 0 / 10 + c
-            resolve(
-              client.setVolume(p).finally(() => {
-                fading.fadeup = false
-                fading.fadedown = false
-              })
-            )
+            client.setVolume(p, options).finally(() => {
+              fading.fadeup = false
+              fading.fadedown = false
+            }).then(resolve)
           }, 300 * 9)
 
           fading.fadeup = true
@@ -47,7 +45,7 @@ export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
           for (let i = 1; i < 9; i++) {
             setTimeout(() => client.setVolume(Math.round(p * (1 - i / 10)), options), (i - 1) * 300)
           }
-          setTimeout(() => resolve(client.setVolume(0, options)), 300 * 9)
+          setTimeout(() => client.setVolume(0, options).then(resolve), 300 * 9)
 
           fading.fadedown = true
         } else {

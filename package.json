@@ -9,11 +9,11 @@
   },
   "dependencies": {
     "@vue/composition-api": "^1.4.0",
-    "@vueuse/core": "^6.9.1",
+    "@vueuse/core": "^9.13.0",
     "bootstrap-vue": "^2.21.2",
     "chart.js": "^2.9.4",
     "core-js": "^3.19.1",
-    "firebase": "^9.4.1",
+    "firebase": "^9.23.0",
     "lodash": "^4.17.21",
     "spotify-web-api-js": "^1.5.2",
     "vue": "^2.6.14",

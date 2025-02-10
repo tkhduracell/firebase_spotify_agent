@@ -59,7 +59,7 @@
           <PlaybackAutoFade
             :enabled="settings.autoFadeEnabled"
             @update:enabled="settings.autoFadeEnabled = $event"
-            :volume="playback.device.volume_percent || 0"
+            :volume="state.device.volume_percent || 0"
             :is-fading="fading.fadedown || fading.fadeup"
             @update:volume="updateVolume"
             v-if="playback"
@@ -143,7 +143,9 @@
       </b-col>
     </b-row>
 
-    <div class="clock">{{ hhmm }}</div>
+    <div class="clock">
+      {{ hhmm }}
+    </div>
     <EditModal v-if="current" :track="current" @update:track="updateTrackInfo" @skip:track="playNext" />
   </b-container>
 </template>
@@ -215,7 +217,6 @@ export default defineComponent({
   },
   setup (props, { root: { $root, $route } }) {
     const state = ref<SpotifyApi.CurrentlyPlayingResponse>()
-    const playback = ref<SpotifyApi.CurrentPlaybackResponse>()
     const historyItems = ref<TrackWithBPM[]>([])
     const context = ref<SpotifyApi.PlaylistObjectSimplified>()
     const playlist = ref<TrackWithBPM[]>([])
@@ -244,7 +245,7 @@ export default defineComponent({
     })
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    const { client, reauth } = useSpotifyRedirect($route, start, update)
+    const { client } = useSpotifyRedirect($route, start, update)
     const clock = useClock()
     const devices = useDevices(client)
     const { startFadeDown, startFadeUp, fading } = useVolume(client)
@@ -258,7 +259,8 @@ export default defineComponent({
     }
 
     function devOpts () {
-      return state.value?.device?.id ? { device_id: state.value.device.id } : {}
+      const device_id = state.value?.device?.id ?? undefined
+      return device_id ? { device_id } : {}
     }
 
     async function start () {
@@ -267,12 +269,10 @@ export default defineComponent({
 
     async function update () {
       try {
-        const res = (await client.getMyCurrentPlayingTrack()) as '' | SpotifyApi.CurrentlyPlayingResponse
-        state.value = res === '' ? undefined : res
-        playback.value = await client.getMyCurrentPlaybackState()
+        const res = await client.getMyCurrentPlayingTrack()
+        state.value = res
       } catch (err) {
-        console.error(err)
-        if (err && (err as { status: number }).status === 401) reauth() // Authenticated, redirect to loginUrl.
+        console.error('Unable to get current play state', err)
       }
     }
 
@@ -427,7 +427,7 @@ export default defineComponent({
       }
 
       if (settings.autoFadeEnabled && passed(s, secondsMax.value - 3)) {
-        startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
+        startFadeDown(state.value?.device.volume_percent ?? undefined, devOpts())
       }
 
       if (settings.autoFadeEnabled && !passed(s, 4)) {
@@ -448,24 +448,28 @@ export default defineComponent({
     }
 
     async function playNext () {
-      if (settings.autoQueueEnabled && queue.track && !queue.sent) {
-        settings.timeLimitEnabled = false
-        settings.autoFadeEnabled = false
+      try {
+        if (settings.autoQueueEnabled && queue.track && !queue.sent) {
+          settings.timeLimitEnabled = false
+          settings.autoFadeEnabled = false
 
-        console.log('[Skip]: Queuing: ', queue.track.title)
-        await client.queue(`spotify:track:${queue.track.id}`, devOpts())
-        queue.sent = true
+          console.log('[Skip]: Queuing: ', queue.track.title)
+          await client.queue(`spotify:track:${queue.track.id}`, devOpts())
+          queue.sent = true
 
-        console.log('[Skip]: Fade out!')
-        await startFadeDown(playback.value?.device.volume_percent ?? undefined, devOpts())
+          console.log('[Skip]: Fade out!')
+          await startFadeDown(state.value?.device.volume_percent ?? undefined, devOpts())
 
-        console.log('[Skip]: Skipping to queued item!')
-        await client.skipToNext(devOpts())
+          console.log('[Skip]: Skipping to queued item!')
+          await client.skipToNext(devOpts())
 
-        settings.autoFadeEnabled = true
-        settings.timeLimitEnabled = true
-      } else {
-        await client.skipToNext(devOpts())
+          settings.autoFadeEnabled = true
+          settings.timeLimitEnabled = true
+        } else {
+          await client.skipToNext(devOpts())
+        }
+      } catch (e) {
+        console.error('Unable to play next song')
       }
     }
 
@@ -497,10 +501,10 @@ export default defineComponent({
       keyn: () => playNext(),
       keyp: () => playPrev(),
       keyr: () => playAgain(),
-      home: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 20),
-      pageup: () => updateVolume((playback.value?.device.volume_percent ?? 0) + 5),
-      end: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 20),
-      pagedown: () => updateVolume((playback.value?.device.volume_percent ?? 0) - 5)
+      home: () => updateVolume((state.value?.device.volume_percent ?? 0) + 20),
+      pageup: () => updateVolume((state.value?.device.volume_percent ?? 0) + 5),
+      end: () => updateVolume((state.value?.device.volume_percent ?? 0) - 20),
+      pagedown: () => updateVolume((state.value?.device.volume_percent ?? 0) - 5)
     })
 
     const { playlists: presets } = usePresets(client, ready)
@@ -526,7 +530,6 @@ export default defineComponent({
       context,
       queue,
       current,
-      playback,
       fading,
       isCurrentWithinRange,
       updateVolume,
