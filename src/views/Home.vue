@@ -18,11 +18,11 @@
               <PlaylistSelector :context="context" v-if="context" @play="play($event)" />
             </b-col>
             <b-col cols="auto">
-              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playAgain">
+              <HelpfulButton class="d-inline-block" @click="playAgain">
                 <b-icon-arrow-counterclockwise scale="2.0" class="mt-4 mb-4" />
               </HelpfulButton>
 
-              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playPrev">
+              <HelpfulButton class="d-inline-block" @click="playPrev">
                 <b-icon-skip-forward-circle scale="2.0" class="mt-4 mb-4" />
               </HelpfulButton>
 
@@ -33,7 +33,7 @@
                 <b-icon-play scale="3.0" class="mt-4 mb-4" />
               </b-button>
 
-              <HelpfulButton class="d-inline-block" :disabled="queue.sent" @click="playNext">
+              <HelpfulButton class="d-inline-block" @click="playNext">
                 <b-icon-skip-backward-circle scale="2.0" class="mt-4 mb-4" />
               </HelpfulButton>
             </b-col>
@@ -165,7 +165,7 @@ import HelpfulButton from '@/components/HelpfulButton.vue'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
-import { useSpotifyRedirect, useSpotifyUser, SpotifyApi } from '@/auth'
+import { useSpotifyRedirect, useSpotifyUser } from '@/auth'
 import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
 import { useVolume } from '@/volume'
