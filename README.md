@@ -3,6 +3,7 @@
 ## Project setup
 ```
 npm install
+npx simple-git-hooks
 ```
 
 ### Compiles and hot-reloads for development

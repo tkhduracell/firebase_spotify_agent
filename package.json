@@ -44,8 +44,12 @@
     "prettier": "^2.4.1",
     "sass": "^1.26.5",
     "sass-loader": "^8.0.2",
+    "simple-git-hooks": "^2.13.0",
     "typescript": "~4.4.4",
     "vue-template-compiler": "^2.6.11"
+  },
+   "simple-git-hooks": {
+    "pre-push": "npm run lint"
   },
   "eslintConfig": {
     "root": true,
