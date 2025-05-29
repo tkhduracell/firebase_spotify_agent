@@ -21,6 +21,7 @@ jobs:
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_FILIPLINDQVIST_COM_EA66D }}'
+          firebaseToolsVersion: '12.9.1'
           channelId: live
           projectId: filiplindqvist-com-ea66d
           target: spotify-agent
