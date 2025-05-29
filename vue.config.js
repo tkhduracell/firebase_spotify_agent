@@ -10,6 +10,16 @@ module.exports = {
     headers: {}
   },
 
+  css: {
+    loaderOptions: {
+      sass: {
+        sassOptions: {
+          quietDeps: true
+        }
+      }
+    }
+  },
+
   chainWebpack: config => {
     config.plugin('html').tap(args => {
       args[0].title = 'Spotify Agent'

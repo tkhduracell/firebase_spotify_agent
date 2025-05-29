@@ -165,7 +165,7 @@ import HelpfulButton from '@/components/HelpfulButton.vue'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { PlaylistDatabase } from '@/playlists'
-import { useSpotifyRedirect, useSpotifyUser, SpotifyApi /* This is used! */ } from '@/auth' 
+import { useSpotifyRedirect, useSpotifyUser, SpotifyApi /* This is used! */ } from '@/auth'
 import { useClock } from '@/clock'
 import { useDevices } from '@/devices'
 import { useVolume } from '@/volume'
