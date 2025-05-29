@@ -65,7 +65,7 @@ $bg: rgba(#252525, 1);
   position: relative;
 
   height: 64px;
-  z-index: 10000;
+  z-index: 1040;
 
   cursor: pointer;
 
