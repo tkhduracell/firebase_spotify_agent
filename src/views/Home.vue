@@ -99,7 +99,7 @@
           </b-col>
           <b-col cols="6">
             <b class="d-block">Last {{ historyItems.length }} played items</b>
-            <div v-for="(l, idx) in historyItems" :key="'h-' + l.id + '-' + idx" v-text="trackFormat(l, true)" />
+            <div v-for="(l, idx) in historyItems.slice(0, 5)" :key="'h-' + l.id + '-' + idx" v-text="trackFormat(l, true)" />
             <div v-if="historyItems.length === 0">
               None so far...
             </div>
