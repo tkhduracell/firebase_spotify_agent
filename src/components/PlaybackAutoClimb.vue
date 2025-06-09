@@ -13,7 +13,7 @@
       </b-col>
       <b-col class="label main mr-2" cols="auto">
         Auto climb
-        <span class="help" v-b-tooltip.hover="'Automatically move between min and max as the target tempo'">
+        <span class="icon" v-b-tooltip.hover="'Automatically move between min and max as the target tempo'">
           <b-icon-question-circle-fill />
         </span>
       </b-col>
@@ -29,7 +29,7 @@
           @change="$emit('update:min', parseInt($event))"
         />
       </b-col>
-      <b-col class="label mr-2" cols="auto">min</b-col>
+      <b-col class="help mr-2" cols="auto">min</b-col>
       <b-col class="mr-2"
         ><b-form-spinbutton
           :disabled="!enabled || disabled"
@@ -42,7 +42,7 @@
           @change="$emit('update:max', parseInt($event))"
         />
       </b-col>
-      <b-col class="label mr-2" cols="auto">max</b-col>
+      <b-col class="help mr-2" cols="auto">max</b-col>
       <b-col class="mr-2"
         ><b-form-spinbutton
           :disabled="!enabled || disabled"
@@ -104,6 +104,13 @@ export default defineComponent({
     font-weight: bold;
     margin-top: 6px;
   }
+  .help {
+    font-weight: bold;
+    /* hide the label when screen width is below 1060px */
+    @media (max-width: 1060px) {
+      display: none;
+    }
+  }
   .label.main {
     max-width: 14em;
     min-width: 10em;
@@ -121,7 +128,7 @@ export default defineComponent({
     font-size: 70%;
     margin-left: 2px;
   }
-  .help {
+  .icon {
     margin-left: 4px;
     color: #1b5894;
   }

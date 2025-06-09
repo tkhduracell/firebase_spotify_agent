@@ -24,7 +24,7 @@
           v-text="sec"
         />
       </b-col>
-      <b-col class="mr-2">
+      <b-col class="mr-2 hide-on-small">
         <b-form-spinbutton
           :disabled="!enabled"
           size="lg"
@@ -75,6 +75,11 @@ export default defineComponent({
   }
   @media (max-width: 1400px) {
     .hide-large {
+      display: none;
+    }
+  }
+  .hide-on-small {
+    @media (max-width: 560px) {
       display: none;
     }
   }
