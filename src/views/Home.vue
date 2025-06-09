@@ -59,10 +59,10 @@
           <PlaybackAutoFade
             :enabled="settings.autoFadeEnabled"
             @update:enabled="settings.autoFadeEnabled = $event"
-            :volume="state.device.volume_percent || 0"
+            :volume="activeDevice.volume_percent"
+            v-if="activeDevice && activeDevice.supports_volume"
             :is-fading="fading.fadedown || fading.fadeup"
             @update:volume="updateVolume"
-            v-if="playback"
             class="mb-2"
           />
           <PlaybackAutoQueuer
@@ -99,9 +99,17 @@
           </b-col>
           <b-col cols="6">
             <b class="d-block">Last {{ historyItems.length }} played items</b>
-            <div v-for="(l, idx) in historyItems.slice(0, 5)" :key="'h-' + l.id + '-' + idx" v-text="trackFormat(l, true)" />
+            <div class="text-truncate" v-for="(l, idx) in historyItems.slice(0, 5)" :key="'h-' + l.id + '-' + idx" v-text="trackFormat(l, true)" >
+
+            </div>
             <div v-if="historyItems.length === 0">
               None so far...
+            </div>
+            <div class="mt-2" v-if="queue2">
+              <b class="d-block mt-2">Playlist queue</b>
+              <div class="text-truncate" v-for="item in queue2.queue.slice(0, 5)" :key="'q-' + item.id" >
+                {{ trackFormat(item, true) }}
+              </div>
             </div>
           </b-col>
         </b-row>
@@ -136,9 +144,9 @@
       <b-col class="mt-4" offset="3" cols="6">
         <HelpContent
           :presets="presets"
-          :devices="devices ? devices.devices : undefined"
+          :devices="devices"
           @play="play($event.id, $event.device)"
-          @devices:reload="loadDevices"
+          @devices:reload="reloadDevices"
         />
       </b-col>
     </b-row>
@@ -174,6 +182,7 @@ import { useUser } from '@/firebase'
 import { useHotKeys } from '@/hotkeys'
 import { usePresets } from '@/presets'
 import { useThrottleFn } from '@vueuse/core'
+import { useQueue } from '@/queue'
 
 type Settings = {
   timeLimitEnabled: boolean
@@ -223,7 +232,7 @@ export default defineComponent({
     const current = ref<TrackWithBPM>()
     const error = ref<SpotifyApi.ErrorObject>()
     const ready = ref(false)
-
+    
     const queue = reactive<QueueState>({
       loading: true,
       sent: false,
@@ -247,13 +256,14 @@ export default defineComponent({
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const { client } = useSpotifyRedirect($route, start, update)
     const clock = useClock()
-    const devices = useDevices(client)
+    const { devices, activeDevice, reloadDevices } = useDevices(client)
     const { startFadeDown, startFadeUp, fading } = useVolume(client)
-
+    
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
+    const { queue: queue2, reloadQueue } = useQueue(client, tracks)
 
-    function trackFormat (track: TrackWithBPM, showBPM = false): string {
+    function trackFormat (track: { artist: string, title: string, bpm: number }, showBPM = false): string {
       const prefix = showBPM && track.bpm ? track.bpm.toFixed() + ' bpm - ' : ''
       return `${prefix}${track.artist} - ${track.title}`
     }
@@ -261,6 +271,14 @@ export default defineComponent({
     function devOpts () {
       const device_id = state.value?.device?.id ?? undefined
       return device_id ? { device_id } : {}
+    }
+
+    function hasVolumeSupport () {
+      const active = activeDevice.value
+      if (active) {
+        return active.supports_volume
+      }
+      return false
     }
 
     async function start () {
@@ -422,16 +440,22 @@ export default defineComponent({
         if (queue.track && !queue.sent) {
           console.log('[Queue] Add track to queue:', queue.track.title, queue.track.bpm)
           await client.queue(`spotify:track:${queue.track.id}`, devOpts())
+          setTimeout(reloadQueue, 1000)
           queue.sent = true
         }
       }
 
       if (settings.autoFadeEnabled && passed(s, secondsMax.value - 3)) {
-        startFadeDown(state.value?.device.volume_percent ?? undefined, devOpts())
+        const currentVolume = activeDevice.value?.volume_percent
+        if (currentVolume !== undefined && currentVolume !== null) {
+          await startFadeDown(currentVolume, devOpts())
+        } else {
+          console.warn('Unable to fade down, no volume support for device', activeDevice.value?.id)
+        }
       }
 
       if (settings.autoFadeEnabled && !passed(s, 4)) {
-        startFadeUp(devOpts())
+        await startFadeUp(devOpts())
       }
     })
 
@@ -467,23 +491,52 @@ export default defineComponent({
           }
 
           console.log('[Skip]: Fade out!')
-          await startFadeDown(state.value?.device.volume_percent ?? undefined, devOpts())
+          const currentVolume = activeDevice.value?.volume_percent
+          if (currentVolume !== undefined && currentVolume !== null) {
+            await startFadeDown(currentVolume, devOpts())
+          } else {
+            console.warn('Unable to fade down, no volume support for device', activeDevice.value?.id)
+          }
 
           console.log('[Skip]: Skipping to queued item!')
-          await client.skipToNext(devOpts())
+          try {
+            await client.skipToNext(devOpts())
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              // Ignore expected, due to old library
+            } else {
+              console.error('Unable to skip to next song', e)
+            }
+          }
 
           settings.autoFadeEnabled = true
           settings.timeLimitEnabled = true
         } else {
-          await client.skipToNext(devOpts())
+          try {
+            await client.skipToNext(devOpts())
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              // Ignore expected, due to old library
+            } else {
+              console.error('Unable to skip to next song', e)
+            }
+          }
         }
       } catch (e) {
-        console.error('Unable to play next song')
+        console.error('Unable to play next song', e)
       }
     }
 
     async function playPrev () {
-      await client.skipToPrevious(devOpts())
+      try {
+        await client.skipToPrevious(devOpts())
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          // Ignore expected, due to old library
+        } else {
+          console.error('Unable to skip to previous song', e)
+        }
+      }
     }
 
     async function playAgain () {
@@ -492,7 +545,11 @@ export default defineComponent({
 
     async function updateVolume (vol: number) {
       if (vol !== null && vol !== undefined) {
+        if (activeDevice.value) {
+          activeDevice.value.volume_percent = Math.max(0, Math.min(100, vol))
+        }
         await client.setVolume(Math.max(0, Math.min(100, vol)), devOpts())
+        await reloadDevices()
       }
     }
 
@@ -521,7 +578,6 @@ export default defineComponent({
     return {
       name,
       ...clock,
-      ...devices,
       seconds,
       secondsTotal,
       secondsMax,
@@ -544,7 +600,12 @@ export default defineComponent({
       updateVolume,
       updateTrackInfo,
       canEdit: computed(() => !!user.id),
-      presets
+      presets,
+      hasVolumeSupport,
+      devices, 
+      activeDevice, 
+      reloadDevices,
+      queue2,
     }
   }
 })
