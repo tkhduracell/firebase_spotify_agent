@@ -79,7 +79,7 @@ import { SpotifyApi } from '@/auth'
 export default defineComponent({
   props: {
     devices: {
-      type: Array as PropType<SpotifyApi.UserDevice[]>,
+      type: Array as PropType<{ type: string, name: string, id: string }[]>,
       required: false
     },
     presets: {
