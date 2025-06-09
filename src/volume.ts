@@ -3,7 +3,6 @@ import { computed, reactive } from '@vue/composition-api'
 import SpotifyWebApi from 'spotify-web-api-js'
 
 export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
-
   const fading = reactive({
     fadedown: false,
     fadeup: false,
@@ -45,12 +44,11 @@ export function useVolume (client: SpotifyWebApi.SpotifyWebApiJs) {
           const p = currentVolume
           console.log('[Fade] Starting to fade down from', p, '->', 0)
           fading.fadedown = true
-          
+
           for (let i = 1; i < 9; i++) {
             setTimeout(() => client.setVolume(Math.round(p * (1 - i / 10)), options), (i - 1) * 300)
           }
           setTimeout(() => client.setVolume(0, options).then(resolve), 300 * 9)
-
         } else {
           return resolve()
         }

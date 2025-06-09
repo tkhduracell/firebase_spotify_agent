@@ -12,7 +12,7 @@ module.exports = {
   devServer: {
     headers: {}
   },
-  
+
   css: {
     loaderOptions: {
       sass: {

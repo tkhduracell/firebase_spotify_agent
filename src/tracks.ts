@@ -156,7 +156,7 @@ export class TrackDatabase {
     for (const doc of res.docs) {
       const data = doc.data() as Record<string, TrackWithBPM>
       const tracks = Object.entries(data)
-      for (const [id, ] of tracks) {
+      for (const [id] of tracks) {
         if (this.db.has(id)) {
           const patch = data[id]
           const updated = { ...this.db.get(id), ...patch }

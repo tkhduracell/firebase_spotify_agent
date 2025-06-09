@@ -232,7 +232,7 @@ export default defineComponent({
     const current = ref<TrackWithBPM>()
     const error = ref<SpotifyApi.ErrorObject>()
     const ready = ref(false)
-    
+
     const queue = reactive<QueueState>({
       loading: true,
       sent: false,
@@ -258,7 +258,7 @@ export default defineComponent({
     const clock = useClock()
     const { devices, activeDevice, reloadDevices } = useDevices(client)
     const { startFadeDown, startFadeUp, fading } = useVolume(client)
-    
+
     const playlists = new PlaylistDatabase(client)
     const tracks = new TrackDatabase(client)
     const { queue: queue2, reloadQueue } = useQueue(client, tracks)
@@ -602,10 +602,10 @@ export default defineComponent({
       canEdit: computed(() => !!user.id),
       presets,
       hasVolumeSupport,
-      devices, 
-      activeDevice, 
+      devices,
+      activeDevice,
       reloadDevices,
-      queue2,
+      queue2
     }
   }
 })
