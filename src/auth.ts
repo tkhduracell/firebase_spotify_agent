@@ -8,7 +8,12 @@ export function useSpotifyRedirect (
   $route: Route,
   onInit?: () => unknown,
   onRefresh?: () => unknown,
-  scopes = ['user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing', 'user-read-recently-played']
+  scopes = [
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+    'user-read-recently-played'
+  ]
 ) {
   const client = new SpotifyWebApi()
 
@@ -28,6 +33,22 @@ export function useSpotifyRedirect (
   })
 
   onMounted(async () => {
+    if (sessionStorage.getItem('spotify_token')) {
+      const token = sessionStorage.getItem('spotify_token')
+      const expires = new Date(sessionStorage.getItem('spotify_token_expires') ?? '')
+      if (token && expires > new Date()) {
+        console.log('Using existing token from session storage', { expires })
+        client.setAccessToken(token)
+        ready.value = true
+        if (onInit) {
+          await onInit()
+        }
+        start()
+        return
+      } else {
+        console.log('Token expired or not found, redirecting...')
+      }
+    }
     const hash = $route.query
     if ('code' in hash) {
       const code = hash.code as string
@@ -37,16 +58,10 @@ export function useSpotifyRedirect (
         console.log('No token')
         return await doRedirect()
       }
-      console.log('Got token', token)
-      client.setAccessToken(token)
-      ready.value = true
-      if (onInit) {
-        await onInit()
-      }
+      location.replace(location.toString().split('?')[0]) // Clear the URL
     } else {
       return await doRedirect()
     }
-    start()
   })
 
   async function reauth () {
@@ -102,6 +117,11 @@ export function useSpotifyRedirect (
     try {
       const body = await fetch('https://accounts.spotify.com/api/token', payload)
       const response = await body.json()
+
+      sessionStorage.setItem('spotify_token', response.access_token)
+      const expires = new Date(Date.now() + (response.expires_in * 1000))
+      sessionStorage.setItem('spotify_token_expires', expires.toISOString())
+
       return response.access_token
     } catch (e) {
       console.error('Unable to auth', e)
