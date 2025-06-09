@@ -5,11 +5,14 @@ const commitHash = require('child_process')
   .toString()
   .trim()
 
+/**
+ * @type {import('@vue/cli-service').ProjectOptions}
+ */
 module.exports = {
   devServer: {
     headers: {}
   },
-
+  
   css: {
     loaderOptions: {
       sass: {
