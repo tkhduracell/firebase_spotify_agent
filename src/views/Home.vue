@@ -454,8 +454,17 @@ export default defineComponent({
           settings.autoFadeEnabled = false
 
           console.log('[Skip]: Queuing: ', queue.track.title)
-          await client.queue(`spotify:track:${queue.track.id}`, devOpts())
-          queue.sent = true
+          try {
+            await client.queue(`spotify:track:${queue.track.id}`, devOpts())
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              // Ignore expected, due to old library
+              queue.sent = true
+            } else {
+              console.error('Unable to queue track', queue.track.title, e)
+              return
+            }
+          }
 
           console.log('[Skip]: Fade out!')
           await startFadeDown(state.value?.device.volume_percent ?? undefined, devOpts())
