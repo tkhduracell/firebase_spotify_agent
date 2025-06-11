@@ -10,6 +10,9 @@
               <div v-b-modal.trackedit class="d-inline-block" v-if="canEdit">
                 <b-icon-pencil-fill scale="0.5" />
               </div>
+              <b-button variant="link" @click="doubleTempo(current.id)" v-if="canEdit">
+                x2
+              </b-button>
             </h1>
           </div>
 
@@ -154,7 +157,8 @@
     <div class="clock">
       {{ hhmm }}
     </div>
-    <EditModal v-if="current" :track="current" @update:track="updateTrackInfo" @skip:track="playNext" />
+    <EditModal v-if="current" :track="current"
+      @update:track="updateTrackInfo" @skip:track="playNext" />
   </b-container>
 </template>
 
@@ -573,6 +577,17 @@ export default defineComponent({
       pagedown: () => updateVolume((state.value?.device.volume_percent ?? 0) - 5)
     })
 
+    async function doubleTempo (id: string) {
+      const old = current.value?.bpm ?? 0
+      const newBPM = Math.round(old * 2)
+      if (old === 0 || newBPM > 240) {
+        console.warn('New BPM is too high, not updating', newBPM)
+        return
+      }
+      current.value = { ...current.value, bpm: newBPM } as TrackWithBPM
+      await tracks.updateTrackInfo(id, { bpm: newBPM } as TrackWithBPM)
+    }
+
     const { playlists: presets } = usePresets(client, ready)
 
     return {
@@ -605,7 +620,8 @@ export default defineComponent({
       devices,
       activeDevice,
       reloadDevices,
-      queue2
+      queue2,
+      doubleTempo
     }
   }
 })
