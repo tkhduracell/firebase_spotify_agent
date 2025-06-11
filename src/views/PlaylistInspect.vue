@@ -194,6 +194,20 @@ export default defineComponent({
       }
     })
 
+    async function logClientError<T = never> (err: any): Promise<T> {
+      debugger
+      if (err instanceof XMLHttpRequest) {
+        const text = err.responseText
+        try {
+          const json = JSON.parse(text)
+          throw new Error(`HTTP ${err.status}: ${err.statusText}`, { cause: json })
+        } catch (e) {
+          throw new Error(`HTTP ${err.status}: ${err.statusText}`, { cause: text })
+        }
+      }
+      throw err
+    }
+
     function variant (bpm: number) {
       if (bpm < 80) return 'danger'
       if (bpm < 100) return 'warning'
@@ -204,14 +218,18 @@ export default defineComponent({
     }
 
     async function play (track: TrackWithBPM) {
-      await client.queue('spotify:track:' + track.id)
-      setTimeout(async () => {
-        await client.skipToNext()
-      }, 500)
+      try {
+        await client.queue('spotify:track:' + track.id).catch(logClientError)
+        setTimeout(async () => {
+          await client.skipToNext().catch(logClientError)
+        }, 500)
+      } catch (err) {
+        console.error('Error playing track', err)
+      }
     }
 
     async function onReady () {
-      const state = await client.getMyCurrentPlaybackState()
+      const state = await client.getMyCurrentPlaybackState().catch(logClientError)
       if (state.context?.type === 'playlist' && !playlistUrl.value) {
         playlistUrl.value = state.context.external_urls?.spotify ?? ''
       }
