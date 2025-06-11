@@ -91,7 +91,7 @@ export function useSpotifyRedirect (
     for (const [key, value] of Object.entries(urlparams)) {
       url.searchParams.append(key, value as string)
     }
-    const authUrl = (url.toString() as unknown) as Location
+    const authUrl = url.toString()
     document.location = authUrl
   }
 
