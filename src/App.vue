@@ -46,7 +46,7 @@
       <div class="d-none d-xl-inline-block">XL</div>
       <div class="d-inline-block ml-1" v-if="isWakeLockActive">- Wakelock</div>
     </footer>
-    <b-modal id="signin" title="Sign In" @ok="doSignIn">
+    <b-modal id="signin" title="Sign In" @ok="doSignIn" :no-close-on-backdrop="true" :no-close-on-esc="true" size="sm">
       <b-row class="my-1">
         <b-col cols="12" class="mb-3">
           As an admin you can help keeping the track database up-to date. If you are intrested in don't hesitate to contact me.
