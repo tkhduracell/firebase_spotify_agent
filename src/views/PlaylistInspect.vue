@@ -62,7 +62,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, ref, watch } from '@vue/composition-api'
+import { computed, defineComponent, reactive, Ref, ref, watch } from '@vue/composition-api'
 
 import { TrackWithBPM, TrackDatabase } from '@/tracks'
 import { useSpotifyRedirect } from '@/auth'
@@ -113,21 +113,21 @@ export default defineComponent({
     const playlistInfo = asyncComputed(() => (force.value && playlistId.value ? client.getPlaylist(playlistId.value) : undefined), undefined, loadingInfo)
 
     const loadingTracks = ref(false)
-    const playlistTracksUnordered = asyncComputed(
+    const playlistTracksUnordered: Ref<TrackWithBPM[]> = asyncComputed<TrackWithBPM[]>(
       () => (force.value && playlistId.value ? playlists.getPlaylistTracks(playlistId.value).then(tracks.getTracksWithTempo.bind(tracks)) : []),
       [],
       loadingTracks
     )
 
-    const sorted = ref(false)
+    const sorted = ref(true)
     const playlistTracks = computed(() => {
       return sorted.value ? sortBy(playlistTracksUnordered.value, t => t.bpm) : playlistTracksUnordered.value
     })
     const playlistStats = computed(() => {
       const bpms = playlistTracksUnordered.value.map(t => t.bpm)
       return {
-        max: max(bpms) ?? 200,
-        min: min(bpms) ?? 60
+        max: max(bpms) as number ?? 200,
+        min: min(bpms) as number ?? 60
       }
     })
     const playlistTempoHistorgram = computed(() => {
