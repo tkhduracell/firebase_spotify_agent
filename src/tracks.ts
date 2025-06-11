@@ -1,7 +1,7 @@
 import Spotify from 'spotify-web-api-js'
-import { chunk } from 'lodash'
+import { chunk, get } from 'lodash'
 import { createLocalDB, LocalDB } from '@/local-db'
-import { collection, Firestore, getDoc, getFirestore, setDoc } from '@firebase/firestore'
+import { collection, Firestore, getDoc, getFirestore, setDoc, updateDoc } from '@firebase/firestore'
 import { doc, getDocs } from 'firebase/firestore'
 import { ProgressFn } from './types'
 import { Timer } from './timer'
@@ -25,7 +25,7 @@ export function toSimple (track: SpotifyApi.PlaylistTrackObject['track'] | Spoti
   }
 }
 
-function trackDoc (f: Firestore, id: string) {
+function trackShardDoc (f: Firestore, id: string) {
   return doc(
     f,
     'spotify-agent',
@@ -53,7 +53,7 @@ export class TrackDatabase {
   }
 
   private async getTempo (id: string): Promise<number> {
-    const override = await getDoc(trackDoc(this.firestore, id))
+    const override = await getDoc(trackShardDoc(this.firestore, id))
     if (override.exists()) {
       const data = override.data()
       if (id in data) {
@@ -142,7 +142,7 @@ export class TrackDatabase {
 
   async updateTrackInfo (id: string, data: TrackWithBPM) {
     console.log('[db] Updating', id, 'with', data)
-    await setDoc(trackDoc(this.firestore, id), { [id]: data }, { merge: true })
+    await setDoc(trackShardDoc(this.firestore, id), { [id]: data }, { merge: true })
     if (this.db.has(id)) {
       this.db.set(id, { ...this.db.get(id), ...data })
     }
